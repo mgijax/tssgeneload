@@ -73,9 +73,6 @@ USAGE = 'Usage: tssgeneQC.py  inputFile'
 # Report file name
 qcRptFile = os.environ['QC_RPT']
 
-# file with records to load 
-inputFileToLoad = os.environ['INPUT_FILE_TOLOAD']
-
 # minimum number of lines expected in the input file
 minLines = int(os.environ['MIN_LINES'])
 
@@ -196,7 +193,7 @@ def init ():
 # Throws: Nothing
 #
 def openFiles ():
-    global fpInfile, fpToLoadFile, fpQcRpt
+    global fpInfile, fpQcRpt
 
     # curator input file
     try:
@@ -205,13 +202,6 @@ def openFiles ():
         print 'Cannot open input file: %s' % inputFile
         sys.exit(1)
     
-    # all lines that pass QC
-    try:
-        fpToLoadFile = open(inputFileToLoad, 'w')
-    except:
-        print 'Cannot open input file: %s' % inputFileToLoad
-        sys.exit(1)
-
     # QC report file
     try:
         fpQcRpt = open(qcRptFile, 'w')
@@ -254,10 +244,6 @@ def runQcChecks ():
 	    linesLookedAtDict[line]= [str(lineNum)]
 
 	tokens = string.split(line, '\t')
-
-	# skip blank lines
-	if  len(tokens) == 1 and tokens[0] == '':
-	    continue
 
 	if len(tokens) < 4:
 	    #print 'missing columns line: %s' % lineNum
@@ -312,7 +298,6 @@ def runQcChecks ():
 
 	# If we get here, we have a good record, write it out to the load file
 	loadCt +=1
-	fpToLoadFile.write('%s\n' % (string.strip(line)))
 
     #
     # Report any fatal errors and exit - if found in published file, the load will not run
@@ -410,9 +395,8 @@ def runQcChecks ():
 # Throws: Nothing
 #
 def closeFiles ():
-    global fpInfile, fpToLoadFile, fpQcRpt
+    global fpInfile, fpQcRpt
     fpInfile.close()
-    fpToLoadFile.close()
     fpQcRpt.close()
     return
 

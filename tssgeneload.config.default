@@ -49,10 +49,9 @@ INPUT_FILE_DEFAULT=${INPUTDIR}/${INPUT_FILE_NAME}
 QC_RPT=${RPTDIR}/tssgene_qc.rpt
 RELATIONSHIP_BCP=MGI_Relationship.bcp
 QC_LOGFILE=${LOGDIR}/tssgene_qc.log
-LOAD_QC_SH=${TSSGENELOAD}/bin/tssgeneQC.sh
 export INPUT_PENDING INPUT_CURRENT
 export INPUT_FILE_NAME INPUT_FILE_DEFAULT QC_RPT RELATIONSHIP_BCP
-export QC_LOGFILE LOAD_QC_SH
+export QC_LOGFILE
 
 #  Complete path name of the log files
 LOG_FILE=${LOGDIR}/tssgeneload.log
@@ -72,9 +71,7 @@ MIN_LINES=70
 # editor creating these annotations
 EDITOR=mgd_dbo
 
-LOAD_QC=${TSSGENELOAD}/bin/tssgeneQC.py
-
-export JNUM MIN_LINES EDITOR LOAD_QC
+export JNUM MIN_LINES EDITOR
 
 #  Send debug messages to the diagnostic log (true or false)
 LOG_DEBUG=false
