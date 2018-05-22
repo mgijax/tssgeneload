@@ -71,8 +71,8 @@ fi
 #
 echo "Source File:      ${INPUT_FILE}"
 echo "Destination File: ${INPUT_FILE_DEFAULT}"
-cp -r ${INPUT_FILE} ${DESTCURRENTDIR}/${INPUT_FILE_NAME}
-cp -r ${INPUT_FILE} ${INPUTDIR}/${INPUT_FILE_NAME}
+cp -r ${INPUT_FILE} ${DESTCURRENTDIR}/${INPUT_FILE_TOLOAD}
+cp -r ${INPUT_FILE} ${INPUTDIR}/${INPUT_FILE_TOLOAD}
 if [ $? -eq 0 ]
 then
     echo "Copy successful"
