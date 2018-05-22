@@ -76,10 +76,6 @@ LIVE_RUN=0; export LIVE_RUN
 if [ $# -eq 1 ]
 then
     INPUT_FILE=$1
-elif [ $# -eq 2 -a "$2" = "live" ]
-then
-    INPUT_FILE=$1
-    LIVE_RUN=1
 else
     echo ${USAGE}; exit 1
 fi

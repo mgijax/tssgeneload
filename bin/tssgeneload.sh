@@ -110,7 +110,7 @@ fi
 echo "" >> ${LOG_DIAG}
 date >> ${LOG_DIAG}
 echo "Run QC checks"  | tee -a ${LOG_DIAG}
-${TSSGeneLOAD}/bin/tssgeneQC.sh ${INPUT_FILE_DEFAULT} live
+${TSSGENELOAD}/bin/tssgeneQC.sh ${INPUT_FILE_DEFAULT}
 STAT=$?
 
 if [ ${STAT} -eq 1 ]

@@ -366,6 +366,7 @@ def runQcChecks ():
 		lineNumString = string.join(linesLookedAtDict[line], ', ')
 		fpQcRpt.write('Lines:%s\t%s' % (lineNumString, ))
 		fpQcRpt.write('\n')
+
 	closeFiles()
         sys.exit(3)
 
@@ -405,14 +406,19 @@ def closeFiles ():
 #
 # Main
 #
+
 #print 'checkArgs'
 checkArgs()
+
 #print 'init'
 init()
+
 #print 'runQcChecks'
 runQcChecks()
+
 #print 'closeFiles'
 closeFiles()
+
 if hasQcErrors: 
     sys.exit(2)
 else:

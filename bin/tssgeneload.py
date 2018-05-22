@@ -61,12 +61,12 @@
 #
 ###########################################################################
 
-itssort sys
-itssort os
-itssort string
+import sys
+import os
+import string
 
-itssort db
-itssort mgi_utils
+import db
+import mgi_utils
 
 #
 #  CONSTANTS
@@ -119,9 +119,13 @@ markerLookup = {}
 
 # for bcp
 bcpin = '%s/bin/bcpin.csh' % os.environ['PG_DBUTILS']
+table = 'MGI_Relationship'
+
 server = os.environ['MGD_DBSERVER']
 database = os.environ['MGD_DBNAME']
-table = 'MGI_Relationship'
+user = os.environ['MGD_DBUSER']
+passwordFileName = os.environ['MGD_DBPASSWORDFILE']
+
 def checkArgs ():
     # Purpose: Validate the arguments to the script.
     # Returns: Nothing
@@ -154,8 +158,6 @@ def init():
     #
     # create database connection
     #
-    user = os.environ['MGD_DBUSER']
-    passwordFileName = os.environ['MGD_DBPASSWORDFILE']
     db.useOneConnection(1)
     db.set_sqlUser(user)
     db.set_sqlPasswordFromFile(passwordFileName)
@@ -175,7 +177,7 @@ def init():
     #
     # lookup of TSS terms
 
-    results = db.sql('''select a.accid, m.symbol
+    results = db.sql('''select a.accid, m._Marker_key
         from MRK_Marker m, ACC_Accession a
         where m._Organism_key = 1 
         and m._Marker_Status_key in (1,3)
@@ -191,7 +193,7 @@ def init():
         tssLookup[tssId] = termKey
 
     # load lookup of Gene terms
-    results = db.sql('''select a.accid, m.symbol
+    results = db.sql('''select a.accid, m._Marker_key
         from MRK_Marker m, ACC_Accession a
         where m._Organism_key = 1 
         and m._Marker_Status_key in (1,3)
