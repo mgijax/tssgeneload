@@ -122,9 +122,9 @@ fi
 echo "" >> ${LOG_DIAG}
 date >> ${LOG_DIAG}
 echo "Run tssgeneload.py"  | tee -a ${LOG_DIAG}
-${TSSGENELOAD}/bin/tssgeneload.py  
+${TSSGENELOAD}/bin/tssgeneload.py | tee -a ${LOG_DIAG}
 STAT=$?
-checkStatus ${STAT} "${TSSGeneLOAD}/bin/tssgeneload.py"
+checkStatus ${STAT} "${TSSGENELOAD}/bin/tssgeneload.py"
 
 #
 # Archive a copy of the input file, adding a timestamp suffix.
