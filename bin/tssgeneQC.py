@@ -64,12 +64,6 @@ import re
 import mgi_utils
 import db
 
-#
-#  CONSTANTS
-#
-TAB = '\t'
-CRT = '\n'
-
 USAGE = 'Usage: tssgeneQC.py  inputFile'
 
 #
@@ -121,7 +115,6 @@ linesLookedAtDict = {}
 
 # Counts reported when no fatal errors
 loadCt = 0
-skipCt = 0
 
 # flags for errors
 hasQcErrors = 0
@@ -239,21 +232,18 @@ def openFiles ():
 #
 def runQcChecks ():
 
-    global hasQcErrors, hasFatalErrors, loadCt, skipCt
+    global hasQcErrors, hasFatalErrors, loadCt
     global linesLookedAtDict
 
-    lineNum = 1 # count header
+    lineNum = 0
 
-    # throw away header
-    header = fpInfile.readline()
     for line in fpInfile.readlines():
+
 	lineNum += 1
-	# don't strip the line or missing header symbol QC won't work; its the first column
-	#print line
-	#line = string.strip(line)
 	
 	# for reporting only
 	lineStripped = string.strip(line)
+
 	if linesLookedAtDict.has_key(line):
 	    #print 'dup line'
 	    linesLookedAtDict[line].append(str(lineNum))
@@ -262,26 +252,23 @@ def runQcChecks ():
 	else:
 	    #print 'new line' 
 	    linesLookedAtDict[line]= [str(lineNum)]
-	tokens = string.split(line, TAB)
-	#print 'count tokens: %s' % len(tokens)
-	#print tokens
-	#print '\n'
-	#print 'lineNum: %s tokens: %s' % (lineNum, tokens)
+
+	tokens = string.split(line, '\t')
+
 	# skip blank lines
 	if  len(tokens) == 1 and tokens[0] == '':
-	    skipCt += 1
 	    continue
+
 	if len(tokens) < 4:
-	    # if the first token is an Tss ID, then we are missing columns
-	    #if string.find(tokens[0], 'Tss:') >= 0: 
 	    #print 'missing columns line: %s' % lineNum
 	    hasFatalErrors = 1
-	    missingColumnsList.append('Line %s: %s%s' % (lineNum, lineStripped, CRT))
+	    missingColumnsList.append('Line %s: %s\n' % (lineNum, lineStripped))
 	    continue
+
 	if tokens[0] == '':
 	    #print 'missing Tss ID: %s' % lineNum
 	    hasQcErrors = 1
-	    missingTssIdList.append('Line %s: %s%s' % (lineNum, lineStripped, CRT))
+	    missingTssIdList.append('Line %s: %s\n' % (lineNum, lineStripped))
 	    continue
 
 	tssId = string.strip(tokens[0])
@@ -294,48 +281,52 @@ def runQcChecks ():
 	#print string.lower(markerId)
 	#print string.lower(markerSymbol)
 	if tssId == '' or tssSymbol == '' or markerId == '' or markerSymbol == '':
-	    missingDataList.append('Line %s: "%s"%s' % (lineNum, lineStripped, CRT))
+	    missingDataList.append('Line %s: "%s"\n' % (lineNum, lineStripped))
 	    #print 'hasFatalErrors missing data'
 	    hasFatalErrors = 1
 	    continue
+
 	hasIdErrors = 0
 	if not tssLookup.has_key(string.lower(tssId)):
-	    invalidTssIDList.append('Line %s: "%s"%s' % (lineNum, lineStripped, CRT))
+	    invalidTssIDList.append('Line %s: "%s"\n' % (lineNum, lineStripped))
 	    hasIdErrors = 1
 	else:
 	    if not tssLookup[string.lower(tssId)] == string.lower(tssSymbol):
-		invalidTssSymbolList.append('Line %s: "%s"  In database: %s%s' % (lineNum, lineStripped, tssLookup[string.lower(tssId)], CRT))
+		invalidTssSymbolList.append('Line %s: "%s"  In database: %s\n' % (lineNum, lineStripped, tssLookup[string.lower(tssId)]))
 		hasIdErrors = 1
 	if not markerLookup.has_key(string.lower(markerId)):
-	    invalidGeneID.append('Line %s: "%s"%s' % (lineNum, lineStripped, CRT))
+	    invalidGeneID.append('Line %s: "%s"\n' % (lineNum, lineStripped))
             hasIdErrors = 1
 	else:
 	    #print markerLookup[string.lower(markerId)]
 	    #print 'should match:'
 	    #print string.lower(markerSymbol)
 	    if not markerLookup[string.lower(markerId)] == string.lower(markerSymbol):
-		invalidGeneList.append('Line %s: "%s"  In database: %s%s' % (lineNum, lineStripped, markerLookup[string.lower(markerId)], CRT))
+		invalidGeneList.append('Line %s: "%s"  In database: %s\n' % (lineNum, lineStripped, markerLookup[string.lower(markerId)]))
 		hasIdErrors = 1
 
 	if hasIdErrors:
 	    #print 'print hasFatalErrors hasIdErrors'
 	    hasFatalErrors = 1
-	    skipCt += 1
 	    continue
+
 	# If we get here, we have a good record, write it out to the load file
 	loadCt +=1
-	fpToLoadFile.write('%s%s' % (string.strip(line), CRT))
+	fpToLoadFile.write('%s\n' % (string.strip(line)))
 
     #
-    # Report any fatal errors and exit - if found in published file, the load 
-    # will not run
+    # Report any fatal errors and exit - if found in published file, the load will not run
     #
 
     if lineNum < minLines:
-	fpQcRpt.write('\nInput file has < %s lines indicating an incomplete file. Total input lines: %s.\n No other QC checking will be done until this is fixed.\n' % (minLines, lineNum))
+	fpQcRpt.write('\nInput file has < %s lines indicating an incomplete file.' % (minLines))
+	fpQcRpt.write('Total input lines: %s.\n' % (lineNum))
+	fpQcRpt.write('No other QC checking will be done until this is fixed.\n')
 	closeFiles()
 	sys.exit(3)
+
     if hasFatalErrors:
+
 	fpQcRpt.write('\nThe following errors must be fixed before publishing; if present, the load will not run\n\n')
 	    
 	if len(missingColumnsList):
@@ -353,7 +344,7 @@ def runQcChecks ():
 	    fpQcRpt.write('\n')
 
         if len(invalidTssIDList):
-            fpQcRpt.write('\nInput lines with invalid Tss header IDs:\n')
+            fpQcRpt.write('\nInput lines with invalid Tss IDs:\n')
             fpQcRpt.write('-----------------------------\n')
             for line in invalidTssIDList:
                 fpQcRpt.write(line)
@@ -379,6 +370,7 @@ def runQcChecks ():
             for line in invalidGeneList:
                 fpQcRpt.write(line)
             fpQcRpt.write('\n')
+
 	for line in linesLookedAtDict:
 	    headerWritten = 0
 	    if len(linesLookedAtDict[line]) > 1:
@@ -387,10 +379,11 @@ def runQcChecks ():
 		    fpQcRpt.write('-----------------------------\n')
 		    headerWritten = 1
 		lineNumString = string.join(linesLookedAtDict[line], ', ')
-		fpQcRpt.write('Lines:%s%s%s' % (lineNumString, TAB, line))
+		fpQcRpt.write('Lines:%s\t%s' % (lineNumString, ))
 		fpQcRpt.write('\n')
 	closeFiles()
         sys.exit(3)
+
     #
     # Report any non-fatal errors
     #
@@ -403,11 +396,7 @@ def runQcChecks ():
                 fpQcRpt.write(line)
             fpQcRpt.write('\n')
 
-    print '%sNumber with non-fatal QC errors, these will not be processed: %s' % (CRT, skipCt)
-    
-    print 'Total number that will be loaded: %s%s' % ( loadCt, CRT)
-	#closeFiles()
-	#sys.exit(2)
+    print 'Total number that will be loaded: %s\n' % (loadCt)
 
     return
 
