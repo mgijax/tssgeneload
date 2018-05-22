@@ -136,7 +136,7 @@ fi
 echo "" >> ${LOG_DIAG}
 date >> ${LOG_DIAG}
 echo "Run tssgeneload.py"  | tee -a ${LOG_DIAG}
-${TSSGeneLOAD}/bin/tssgeneload.py  
+${TSSGENELOAD}/bin/tssgeneload.py  
 STAT=$?
 checkStatus ${STAT} "${TSSGeneLOAD}/bin/tssgeneload.py"
 

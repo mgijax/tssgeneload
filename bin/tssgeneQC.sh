@@ -70,9 +70,6 @@ CONFIG=${TSSGENELOAD}/tssgeneload.config
 
 USAGE='Usage: tssgeneQC.sh  filename'
 
-# this is a QC check only run, set LIVE_RUN accordingly
-LIVE_RUN=0; export LIVE_RUN
-
 if [ $# -eq 1 ]
 then
     INPUT_FILE=$1
@@ -117,7 +114,7 @@ rm -f ${QC_RPT}; >${QC_RPT}
 echo "" >> ${LOG}
 date >> ${LOG}
 echo "Run QC checks on the input file" >> ${LOG}
-${TSSGENELOAD}/bin/tssgeneQC.sh ${INPUT_FILE}
+${TSSGENELOAD}/bin/tssgeneQC.py ${INPUT_FILE}
 STAT=$?
 if [ ${STAT} -eq 0 ]
 then
