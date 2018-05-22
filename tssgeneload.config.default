@@ -25,11 +25,6 @@ fi
 
 . ${MGICONFIG}/master.config.sh
 
-#  Annotation Loader shell script
-ANNOTLOADER=${ANNOTLOAD}/annotload.csh
-
-export ANNOTLOADER
-
 ###########################################################################
 #
 #  LOAD SPECIFIC SETTINGS
