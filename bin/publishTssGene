@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#  publishMpHpo
+#  publishTssGene
 ###########################################################################
 #
 # A copy of this script is intended to reside in /usr/local/mgi/bin on all
@@ -13,7 +13,7 @@
 
 usage ()
 {
-    echo "Usage: publishMpHpo input_file"
+    echo "Usage: publishTssGene input_file"
     echo "       where"
     echo "           input_file = name of the relationship input file"
     exit 1
@@ -21,16 +21,16 @@ usage ()
 
 CURRENT_DIR=`pwd`
 
-LOADDIR=/usr/local/mgi/live/dataload/mp_hpoload
-CONFIG=${LOADDIR}/mp_hpoload.config
+LOADDIR=/usr/local/mgi/live/dataload/tssgeneload
+CONFIG=${LOADDIR}/tssgeneload.config
 
 #
-# The mp_hpoload product is not installed on all servers, so make sure
+# The tssgeneload product is not installed on all servers, so make sure
 # it exists on this one.
 #
 if [ ! -d ${LOADDIR} ]
 then
-    echo "The mp_hpoload software does not exist on this server"
+    echo "The tssgeneload software does not exist on this server"
     exit 1
 fi
 

@@ -2,20 +2,20 @@
 
 #
 # This script is a wrapper around the process that loads 
-# MP/HPO relationships
+# TSS/Gene relationships
 #
 #
-#     mp_hpoload.sh 
+#     tssgeneload.sh 
 #
 
 cd `dirname $0`/..
-CONFIG_LOAD=`pwd`/mp_hpoload.config
+CONFIG_LOAD=`pwd`/tssgeneload.config
 
 cd `dirname $0`
-LOG=`pwd`/mp_hpoload.log
+LOG=`pwd`/tssgeneload.log
 rm -rf ${LOG}
 
-USAGE='Usage: mp_hpoload.sh'
+USAGE='Usage: tssgeneload.sh'
 SCHEMA='mgd'
 
 #
@@ -112,12 +112,12 @@ fi
 echo "" >> ${LOG_DIAG}
 date >> ${LOG_DIAG}
 echo "Run QC checks"  | tee -a ${LOG_DIAG}
-${MPHPOLOAD}/bin/mpHpoQC.sh ${INPUT_FILE_DEFAULT} live
+${TSSGeneLOAD}/bin/tssgeneQC.sh ${INPUT_FILE_DEFAULT} live
 STAT=$?
 
 if [ ${STAT} -eq 1 ]
 then
-    checkStatus ${STAT} "An error occurred while generating the sanity/QC reports - See ${QC_LOGFILE}. mpHpoQC.sh"
+    checkStatus ${STAT} "An error occurred while generating the sanity/QC reports - See ${QC_LOGFILE}. tssgeneQC.sh"
 
     # run postload cleanup and email logs
     shutDown
@@ -125,7 +125,7 @@ fi
 
 if [ ${STAT} -eq 3 ]
 then
-    checkStatus ${STAT} "Fatal QC errors detected. See ${QC_RPT}. mpHpoQC.sh"
+    checkStatus ${STAT} "Fatal QC errors detected. See ${QC_RPT}. tssgeneQC.sh"
     
     # run postload cleanup and email logs
     shutDown
@@ -137,10 +137,10 @@ fi
 #
 echo "" >> ${LOG_DIAG}
 date >> ${LOG_DIAG}
-echo "Run mp_hpoload.py"  | tee -a ${LOG_DIAG}
-${MPHPOLOAD}/bin/mp_hpoload.py  
+echo "Run tssgeneload.py"  | tee -a ${LOG_DIAG}
+${TSSGeneLOAD}/bin/tssgeneload.py  
 STAT=$?
-checkStatus ${STAT} "${MPHPOLOAD}/bin/mp_hpoload.py"
+checkStatus ${STAT} "${TSSGeneLOAD}/bin/tssgeneload.py"
 
 #
 # Archive a copy of the input file, adding a timestamp suffix.
@@ -148,8 +148,8 @@ checkStatus ${STAT} "${MPHPOLOAD}/bin/mp_hpoload.py"
 echo "" >> ${LOG_DIAG}
 date >> ${LOG_DIAG}
 echo "Archive input file" >> ${LOG_DIAG}
-TIMESTAMP=`date '+%Y%m%d.%H%M'`
-ARC_FILE=`basename ${INPUT_FILE_DEFAULT}`.${TIMESTAMP}
+TIMESTATSS=`date '+%Y%m%d.%H%M'`
+ARC_FILE=`basename ${INPUT_FILE_DEFAULT}`.${TIMESTATSS}
 cp -p ${INPUT_FILE_DEFAULT} ${ARCHIVEDIR}/${ARC_FILE}
 
 #

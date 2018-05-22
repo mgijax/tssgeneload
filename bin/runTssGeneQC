@@ -1,35 +1,35 @@
 #!/bin/sh
 #
-#  runMpHpoQC
+#  runTssGeneQC
 ###########################################################################
 #
 # A copy of this script is intended to reside in /usr/local/bin on all
 # servers to make it available in the common PATH.
 #
-# Its allows someone to run the MP/HPO QC reports without having
+# Its allows someone to run the Tss-to-Gene QC reports without having
 # to provide the full path to where the wrapper script is installed.
 #
 ###########################################################################
 
 usage ()
 {
-    echo "Usage: runMpHpoQC input_file"
+    echo "Usage: runTssGeneQC input_file"
     echo "       where"
-    echo "           input_file = path to the MP/HPO input file"
+    echo "           input_file = path to the Tss-to-Gene input file"
     exit 1
 }
 
-LOADDIR=/usr/local/mgi/live/dataload/mp_hpoload
+LOADDIR=/usr/local/mgi/live/dataload/tssgeneload
 
 WRAPPER=${LOADDIR}/bin/mpHpoQC.sh
 
 #
-# The mp_hpoload product is not installed on all servers, so make sure
+# The tssgeneload product is not installed on all servers, so make sure
 # it exists on this one.
 #
 if [ ! -d ${LOADDIR} ]
 then
-    echo "The mp_hpoload software does not exist on this server"; exit 1
+    echo "The tssgeneload software does not exist on this server"; exit 1
 fi
 
 #

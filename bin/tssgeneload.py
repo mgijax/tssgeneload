@@ -1,6 +1,6 @@
 #!/usr/local/bin/python
 #
-#  mp_hpoload.py
+#  tssgeneload.py
 ###########################################################################
 #
 #  Purpose:
@@ -9,17 +9,17 @@
 #
 #  Usage:
 #
-#      mp_hpoload.py 
+#      tssgeneload.py 
 #
 #  Inputs:
 #
-#	1. load-ready MP/HPO file tab-delimited in the following format
-#	    1. MP ID
-#	    2. MP Term
-#	    3. HPO ID
-#	    4. HPO Term
+#	1. load-ready TSS/Gene file tab-delimited in the following format
+#	    1. TSS ID
+#	    2. TSS Term
+#	    3. Gene ID
+#	    4. Gene Term
 #
-#	2. Configuration - see mp_hpoload.config
+#	2. Configuration - see tssgeneload.config
 #
 #  Outputs:
 #
@@ -27,7 +27,7 @@
 #
 #  Exit Codes:
 #
-#      0:  Successful completion
+#      0:  Successful cotssletion
 #      1:  An exception occurred
 #      2:  bcp fails
 
@@ -35,7 +35,7 @@
 #
 #      1) QC checks have been run and all errors fixed
 #	
-#  Implementation:
+#  Itsslementation:
 #
 #      This script will perform following steps:
 #
@@ -61,12 +61,12 @@
 #
 ###########################################################################
 
-import sys
-import os
-import string
+itssort sys
+itssort os
+itssort string
 
-import db
-import mgi_utils
+itssort db
+itssort mgi_utils
 
 #
 #  CONSTANTS
@@ -74,7 +74,7 @@ import mgi_utils
 TAB = '\t'
 CRT = '\n'
 DATE = mgi_utils.date("%m/%d/%Y")
-USAGE='mp_hpoload.py'
+USAGE='tssgeneload.py'
 
 #
 #  GLOBALS
@@ -92,30 +92,30 @@ relationshipFile = '%s/%s' % (outputDir, bcpFile)
 fpInFile = ''
 fpRelationshipFile = ''
 
-# The mp_hpo relationship category key 'mp_to_hpo'
-catKey = 1005
+# The tssgene relationship category key 'tss_to_gene'
+catKey = 1008
 
-# the mp_hpo relationship term key 'mp_to_hpo'
+# the tssgene relationship term key 'tss_to_marker'
 relKey = 17396910
 
-# the mp_hpo qualifier key 'Not Specified'
+# the tssgene qualifier key 'Not Specified'
 qualKey = 11391898
 
-# the mpo_hpo evidence key 'Not Specified'
+# the tsso_marker evidence key 'Not Specified'
 evidKey = 17396909
 
-# the mp_hpo reference key 'J:229957'
-refsKey = 231052
+# the tssgene reference key 'J:229957'
+refsKey = 209979
 
-# mp_hpoload user key
-userKey = 1558
+# tssgeneload user key
+userKey = 1604
 
 # database primary keys, will be set to the next available from the db
 nextRelationshipKey = 1000	# MGI_Relationship._Relationship_key
 
 # Lookups
-mpHeaderLookup = {}
-hpoLookup = {}
+tssHeaderLookup = {}
+markerLookup = {}
 
 # for bcp
 bcpin = '%s/bin/bcpin.csh' % os.environ['PG_DBUTILS']
@@ -144,7 +144,7 @@ def init():
     # Effects: Sets global variables, exits if a file can't be opened,
     #  creates files in the file system, creates connection to a database
 
-    global nextRelationshipKey, mpHeaderLookup, hpoLookup
+    global nextRelationshipKey, tssHeaderLookup, markerLookup
 
     #
     # Open input and output files
@@ -173,7 +173,7 @@ def init():
     #
     # create lookups
     #
-    # lookup of MP header terms
+    # lookup of TSS header terms
     results = db.sql('''select a.accid, t.term, t._Term_key
         from DAG_Node n, VOC_Term t, ACC_Accession a
         where n._Label_key = 3
@@ -186,11 +186,11 @@ def init():
         and a.preferred = 1''', 'auto')
 
     for r in results:
-        mpId = string.lower(r['accid'])
+        tssId = string.lower(r['accid'])
         termKey = r['_Term_key']
-        mpHeaderLookup[mpId] = termKey
+        tssHeaderLookup[tssId] = termKey
 
-    # load lookup of HPO terms
+    # load lookup of Gene terms
     results = db.sql('''select a.accid, t.term, t._Term_key
         from VOC_Term t, ACC_Accession a
         where t._Vocab_key = 106
@@ -199,9 +199,9 @@ def init():
         and a._LogicalDB_key = 180''', 'auto')
 
     for r in results:
-        hpoId = string.lower(r['accid'])
+        markerId = string.lower(r['accid'])
         termKey = r['_Term_key']
-        hpoLookup[hpoId] = termKey
+        markerLookup[markerId] = termKey
 
     return
 
@@ -264,10 +264,10 @@ def createFiles( ):
     #
     for line in fpInFile.readlines():
 	tokens = map(string.strip, string.split(line, TAB))
-        mpId = string.lower(string.strip(tokens[0]))
-	objKey1 = mpHeaderLookup[mpId]
-        hpoId = string.lower(string.strip(tokens[2]))
-	objKey2 = hpoLookup[hpoId]
+        tssId = string.lower(string.strip(tokens[0]))
+	objKey1 = tssHeaderLookup[tssId]
+        markerId = string.lower(string.strip(tokens[2]))
+	objKey2 = markerLookup[markerId]
 
 	# MGI_Relationship
 	fpRelationshipFile.write('%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s' % \

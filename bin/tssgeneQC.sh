@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#  mpHpoQC.sh
+#  tssgeneQC.sh
 ###########################################################################
 #
 #  Purpose:
@@ -10,7 +10,7 @@
 #
 #  Usage:
 #
-#      mpHpoQC.sh  filename  
+#      tssgeneQC.sh  filename  
 #
 #      where
 #          filename = full path to the input file
@@ -20,7 +20,7 @@
 #      See the configuration file
 #
 #  Inputs:
-#	mpHpo input file
+#	tssgene input file
 #
 #  Outputs:
 #
@@ -43,7 +43,7 @@
 #      2) Validate & source the configuration files to establish the environment
 #      3) Verify that the input file exists.
 #      4) Initialize the log and report files.
-#      5) Call mpHpoQC.py to generate the QC report.
+#      5) Call tssgeneQC.py to generate the QC report.
 #
 #  Notes:  None
 #
@@ -54,13 +54,13 @@
 #  Date        SE   Change Description
 #  ----------  ---  -------------------------------------------------------
 #
-#  12/22/2015  sc  Initial development
+#  05/22/2018  lec  Initial development
 #
 ###########################################################################
 CURRENTDIR=`pwd`
 BINDIR=`dirname $0`
 
-USAGE='Usage: mpHpoQC.sh  filename'
+USAGE='Usage: tssgeneQC.sh  filename'
 
 # this is a QC check only run, set LIVE_RUN accordingly
 LIVE_RUN=0; export LIVE_RUN
@@ -70,7 +70,7 @@ LIVE_RUN=0; export LIVE_RUN
 # argument is given, that means that the output files are located in the
 # /data/loads/... directory, not in the current directory.
 #
-CONFIG=`cd ${BINDIR}/..; pwd`/mp_hpoload.config
+CONFIG=`cd ${BINDIR}/..; pwd`/tssgeneload.config
 
 if [ $# -eq 1 ]
 then
@@ -95,7 +95,7 @@ fi
 
 #
 # If this is not a "live" run, the output, log and report files should reside
-# in the current directory, so mpHpo the default settings.
+# in the current directory, so tssgene the default settings.
 #
 if [ ${LIVE_RUN} -eq 0 ]
 then

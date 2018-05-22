@@ -1,16 +1,16 @@
 #!/usr/local/bin/python
 #
-#  mpHpoQC.py
+#  tssgeneQC.py
 ###########################################################################
 #
 #  Purpose:
 #
 #	This script will generate a QC report for the
-#	    MP/HPO Mapping Load file
+#	    Tss-to-Gene Load file
 #
 #  Usage:
 #
-#      mpHpoQC.py  filename
+#      tssgeneQC.py  filename
 #
 #      where:
 #          filename = path to the input file
@@ -23,12 +23,12 @@
 #          QC_RPT
 #	   
 #  Inputs:
-# 	MP/HPO input file
+# 	Tss-to-Gene input file
 #	Columns:
-#	1. MP ID
-#	2. MP Term
-#	3. HPO ID
-#	4. HPO Term
+#	1. Tss ID
+#	2. Tss Term
+#	3. Gene ID
+#	4. Gene Term
 #
 #  Outputs:
 #
@@ -70,7 +70,7 @@ import db
 TAB = '\t'
 CRT = '\n'
 
-USAGE = 'Usage: mpHpoQC.py  inputFile'
+USAGE = 'Usage: tssgeneQC.py  inputFile'
 
 #
 #  GLOBALS
@@ -85,11 +85,11 @@ inputFileToLoad = os.environ['INPUT_FILE_TOLOAD']
 # minimum number of lines expected in the input file
 minLines = int(os.environ['MIN_LINES'])
 
-# {mpID:key, ...}
-mpHeaderLookup = {}
+# {tssID:key, ...}
+tssHeaderLookup = {}
 
-# {hpoID:key, ...}
-hpoLookup = {}
+# {markerID:key, ...}
+markerLookup = {}
 
 # input lines with missing data
 missingDataList = []
@@ -97,20 +97,20 @@ missingDataList = []
 # input lines with < 4 columns
 missingColumnsList = []
 
-# input lines with no MP ID
-missingMpIdList = []
+# input lines with no Tss ID
+missingTssIdList = []
 
-# input MP header IDs not in the database
-invalidMpHeaderList = []
+# input Tss header IDs not in the database
+invalidTssHeaderList = []
 
-# input MP header term does not match term in the database
-invalidMpTermList = []
+# input Tss header term does not match term in the database
+invalidTssTermList = []
 
-# input HPO IDs not in the database
-invalidHpoList = []
+# input Gene IDs not in the database
+invalidGene = []
 
-# input HPO term does not match term in the database
-invalidHpoTermList = []
+# input Gene term does not match term in the database
+invalidGene = []
 
 # all passing QC (non-fatal, non-skip)
 linesToLoadList = []
@@ -155,12 +155,12 @@ def checkArgs ():
 # Throws: Nothing
 #
 def init ():
-    global hpoLookup, mpHeaderLookup 
+    global markerLookup, tssHeaderLookup 
 
     openFiles()
    
     # load lookups 
-    # lookup of MP header terms
+    # lookup of Tss header terms
     results = db.sql('''select a.accid, t.term
 	from DAG_Node n, VOC_Term t, ACC_Accession a
 	where n._Label_key = 3
@@ -173,11 +173,11 @@ def init ():
 	and a.preferred = 1''', 'auto')
  
     for r in results:
-        mpId = string.lower(r['accid'])
+        tssId = string.lower(r['accid'])
 	term = string.lower(r['term'])
-	mpHeaderLookup[mpId] = term
+	tssHeaderLookup[tssId] = term
 
-    # load lookup of HPO terms
+    # load lookup of Gene terms
     results = db.sql('''select a.accid, t.term 
 	from VOC_Term t, ACC_Accession a
 	where t._Vocab_key = 106
@@ -187,9 +187,9 @@ def init ():
 	and a.preferred = 1''', 'auto')
 
     for r in results:
-	hpoId = string.lower(r['accid'])
+	markerId = string.lower(r['accid'])
         term = string.lower(r['term'])
-	hpoLookup[hpoId] = term
+	markerLookup[markerId] = term
 
     return
 
@@ -271,49 +271,49 @@ def runQcChecks ():
 	    skipCt += 1
 	    continue
 	if len(tokens) < 4:
-	    # if the first token is an MP ID, then we are missing columns
-	    #if string.find(tokens[0], 'MP:') >= 0: 
+	    # if the first token is an Tss ID, then we are missing columns
+	    #if string.find(tokens[0], 'Tss:') >= 0: 
 	    #print 'missing columns line: %s' % lineNum
 	    hasFatalErrors = 1
 	    missingColumnsList.append('Line %s: %s%s' % (lineNum, lineStripped, CRT))
 	    continue
 	if tokens[0] == '':
-	    #print 'missing MP ID: %s' % lineNum
+	    #print 'missing Tss ID: %s' % lineNum
 	    hasQcErrors = 1
-	    missingMpIdList.append('Line %s: %s%s' % (lineNum, lineStripped, CRT))
+	    missingTssIdList.append('Line %s: %s%s' % (lineNum, lineStripped, CRT))
 	    continue
 
-	mpId = string.strip(tokens[0])
-	mpTerm = string.strip(tokens[1])
-	hpoId = string.strip(tokens[2])
+	tssId = string.strip(tokens[0])
+	tssTerm = string.strip(tokens[1])
+	markerId = string.strip(tokens[2])
 	# strip this token, there may or may not be a line break
-	hpoTerm = string.strip(tokens[3])
-	#print string.lower(mpId)
-	#print string.lower(mpTerm)
-	#print string.lower(hpoId)
-	#print string.lower(hpoTerm)
-	if mpId == '' or mpTerm == '' or hpoId == '' or hpoTerm == '':
+	markerTerm = string.strip(tokens[3])
+	#print string.lower(tssId)
+	#print string.lower(tssTerm)
+	#print string.lower(markerId)
+	#print string.lower(markerTerm)
+	if tssId == '' or tssTerm == '' or markerId == '' or markerTerm == '':
 	    missingDataList.append('Line %s: "%s"%s' % (lineNum, lineStripped, CRT))
 	    #print 'hasFatalErrors missing data'
 	    hasFatalErrors = 1
 	    continue
 	hasIdErrors = 0
-	if not mpHeaderLookup.has_key(string.lower(mpId)):
-	    invalidMpHeaderList.append('Line %s: "%s"%s' % (lineNum, lineStripped, CRT))
+	if not tssHeaderLookup.has_key(string.lower(tssId)):
+	    invalidTssHeaderList.append('Line %s: "%s"%s' % (lineNum, lineStripped, CRT))
 	    hasIdErrors = 1
 	else:
-	    if not mpHeaderLookup[string.lower(mpId)] == string.lower(mpTerm):
-		invalidMpTermList.append('Line %s: "%s"  In database: %s%s' % (lineNum, lineStripped, mpHeaderLookup[string.lower(mpId)], CRT))
+	    if not tssHeaderLookup[string.lower(tssId)] == string.lower(tssTerm):
+		invalidTssTermList.append('Line %s: "%s"  In database: %s%s' % (lineNum, lineStripped, tssHeaderLookup[string.lower(tssId)], CRT))
 		hasIdErrors = 1
-	if not hpoLookup.has_key(string.lower(hpoId)):
-	    invalidHpoList.append('Line %s: "%s"%s' % (lineNum, lineStripped, CRT))
+	if not markerLookup.has_key(string.lower(markerId)):
+	    invalidGene %s: "%s"%s' % (lineNum, lineStripped, CRT))
             hasIdErrors = 1
 	else:
-	    #print hpoLookup[string.lower(hpoId)]
+	    #print markerLookup[string.lower(markerId)]
 	    #print 'should match:'
-	    #print string.lower(hpoTerm)
-	    if not hpoLookup[string.lower(hpoId)] == string.lower(hpoTerm):
-		invalidHpoTermList.append('Line %s: "%s"  In database: %s%s' % (lineNum, lineStripped, hpoLookup[string.lower(hpoId)], CRT))
+	    #print string.lower(markerTerm)
+	    if not markerLookup[string.lower(markerId)] == string.lower(markerTerm):
+		invalidGene %s: "%s"  In database: %s%s' % (lineNum, lineStripped, markerLookup[string.lower(markerId)], CRT))
 		hasIdErrors = 1
 
 	if hasIdErrors:
@@ -351,31 +351,31 @@ def runQcChecks ():
 		fpQcRpt.write(line)
 	    fpQcRpt.write('\n')
 
-        if len(invalidMpHeaderList):
-            fpQcRpt.write('\nInput lines with invalid MP header IDs:\n')
+        if len(invalidTssHeaderList):
+            fpQcRpt.write('\nInput lines with invalid Tss header IDs:\n')
             fpQcRpt.write('-----------------------------\n')
-            for line in invalidMpHeaderList:
+            for line in invalidTssHeaderList:
                 fpQcRpt.write(line)
             fpQcRpt.write('\n')
 
-	if len(invalidMpTermList):
-	    fpQcRpt.write('\nInput lines where MP term does not match term in the database:\n')
+	if len(invalidTssTermList):
+	    fpQcRpt.write('\nInput lines where Tss term does not match term in the database:\n')
             fpQcRpt.write('-----------------------------\n')
-            for line in invalidMpTermList:
+            for line in invalidTssTermList:
                 fpQcRpt.write(line)
             fpQcRpt.write('\n')
 
-        if len(invalidHpoList):
-            fpQcRpt.write('\nInput lines with invalid HPO IDs:\n')
+        if len(invalidGeneList):
+            fpQcRpt.write('\nInput lines with invalid Gene IDs:\n')
             fpQcRpt.write('-----------------------------\n')
-            for line in invalidHpoList:
+            for line in invalidGeneList:
                 fpQcRpt.write(line)
             fpQcRpt.write('\n')
 
-	if len(invalidHpoTermList):
-            fpQcRpt.write('\nInput lines where HPO term does not match term in the database:\n')
+	if len(invalidGeneTermList):
+            fpQcRpt.write('\nInput lines where Gene term does not match term in the database:\n')
             fpQcRpt.write('-----------------------------\n')
-            for line in invalidHpoTermList:
+            for line in invalidGeneTermList:
                 fpQcRpt.write(line)
             fpQcRpt.write('\n')
 	for line in linesLookedAtDict:
@@ -395,10 +395,10 @@ def runQcChecks ():
     #
     if hasQcErrors:
 	fpQcRpt.write('\nThe following errors are non-fatal. These records will be skipped.\n\n')
-	if len(missingMpIdList):
-	    fpQcRpt.write('\nInput lines with missing MP header ID:\n')
+	if len(missingTssIdList):
+	    fpQcRpt.write('\nInput lines with missing Tss header ID:\n')
             fpQcRpt.write('-----------------------------\n')
-            for line in missingMpIdList:
+            for line in missingTssIdList:
                 fpQcRpt.write(line)
             fpQcRpt.write('\n')
 
