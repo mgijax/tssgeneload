@@ -18,20 +18,6 @@ fi
 
 CONFIG=${TSSGENELOAD}/tssgeneload.config
 
-LOG=${TSSGENELOAD}/tssgeneload.log
-rm -rf ${LOG}
-
-USAGE='Usage: tssgeneload.sh'
-
-#
-#  Verify the argument(s) to the shell script.
-#
-if [ $# -ne 0 ]
-then
-    echo ${USAGE} | tee -a ${LOG}
-    exit 1
-fi
-
 #
 # verify & source the configuration file
 #
