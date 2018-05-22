@@ -26,9 +26,9 @@
 # 	Tss-to-Gene input file
 #	Columns:
 #	1. Tss ID
-#	2. Tss Term
+#	2. Tss Symbol
 #	3. Gene ID
-#	4. Gene Term
+#	4. Gene Symbol
 #
 #  Outputs:
 #
@@ -86,7 +86,7 @@ inputFileToLoad = os.environ['INPUT_FILE_TOLOAD']
 minLines = int(os.environ['MIN_LINES'])
 
 # {tssID:key, ...}
-tssHeaderLookup = {}
+tssLookup = {}
 
 # {markerID:key, ...}
 markerLookup = {}
@@ -103,13 +103,13 @@ missingTssIdList = []
 # input Tss header IDs not in the database
 invalidTssHeaderList = []
 
-# input Tss header term does not match term in the database
-invalidTssTermList = []
+# input Tss header symbol does not match symbol in the database
+invalidTssSymbolList = []
 
 # input Gene IDs not in the database
 invalidGene = []
 
-# input Gene term does not match term in the database
+# input Gene symbol does not match symbol in the database
 invalidGene = []
 
 # all passing QC (non-fatal, non-skip)
@@ -155,41 +155,42 @@ def checkArgs ():
 # Throws: Nothing
 #
 def init ():
-    global markerLookup, tssHeaderLookup 
+    global markerLookup, tssLookup 
 
     openFiles()
    
     # load lookups 
-    # lookup of Tss header terms
-    results = db.sql('''select a.accid, t.term
-	from DAG_Node n, VOC_Term t, ACC_Accession a
-	where n._Label_key = 3
-	and n._Object_key = t._Term_key
-	and t._Vocab_key = 5
-	and t.isObsolete = 0
-	and t._Term_key = a._Object_key
-	and a._MGIType_key = 13
-	and a._LogicalDB_key = 34
+    # lookup of Tss symbols
+    results = db.sql('''select a.accid, m.symbol
+	from MRK_Marker m, ACC_Accession a
+	where m._Organism_key = 1
+	and m._Marker_Status_key in (1,3)
+	and m.name like 'transcription start site region %'
+	and m._Marker_key = a._Object_key
+	and a._MGIType_key = 2
+	and a._LogicalDB_key = 1
 	and a.preferred = 1''', 'auto')
  
     for r in results:
         tssId = string.lower(r['accid'])
-	term = string.lower(r['term'])
-	tssHeaderLookup[tssId] = term
+	symbol = string.lower(r['symbol'])
+	tssLookup[tssId] = symbol
 
-    # load lookup of Gene terms
-    results = db.sql('''select a.accid, t.term 
-	from VOC_Term t, ACC_Accession a
-	where t._Vocab_key = 106
-	and t._Term_key = a._Object_key
-	and a._MGIType_key = 13
-        and a._LogicalDB_key = 180
+    # load lookup of Gene symbols
+    results = db.sql('''select a.accid, m.symbol
+	from MRK_Marker m, ACC_Accession a
+	where m._Organism_key = 1
+	and m._Marker_Status_key in (1,3)
+	and m.name not like 'transcription start site region %'
+	and m._Marker_key = a._Object_key
+	and a._MGIType_key = 2
+	and a._LogicalDB_key = 1
 	and a.preferred = 1''', 'auto')
 
     for r in results:
 	markerId = string.lower(r['accid'])
-        term = string.lower(r['term'])
-	markerLookup[markerId] = term
+        symbol = string.lower(r['symbol'])
+	markerLookup[markerId] = symbol
 
     return
 
@@ -247,7 +248,7 @@ def runQcChecks ():
     header = fpInfile.readline()
     for line in fpInfile.readlines():
 	lineNum += 1
-	# don't strip the line or missing header term QC won't work; its the first column
+	# don't strip the line or missing header symbol QC won't work; its the first column
 	#print line
 	#line = string.strip(line)
 	
@@ -284,26 +285,26 @@ def runQcChecks ():
 	    continue
 
 	tssId = string.strip(tokens[0])
-	tssTerm = string.strip(tokens[1])
+	tssSymbol = string.strip(tokens[1])
 	markerId = string.strip(tokens[2])
 	# strip this token, there may or may not be a line break
-	markerTerm = string.strip(tokens[3])
+	markerSymbol = string.strip(tokens[3])
 	#print string.lower(tssId)
-	#print string.lower(tssTerm)
+	#print string.lower(tssSymbol)
 	#print string.lower(markerId)
-	#print string.lower(markerTerm)
-	if tssId == '' or tssTerm == '' or markerId == '' or markerTerm == '':
+	#print string.lower(markerSymbol)
+	if tssId == '' or tssSymbol == '' or markerId == '' or markerSymbol == '':
 	    missingDataList.append('Line %s: "%s"%s' % (lineNum, lineStripped, CRT))
 	    #print 'hasFatalErrors missing data'
 	    hasFatalErrors = 1
 	    continue
 	hasIdErrors = 0
-	if not tssHeaderLookup.has_key(string.lower(tssId)):
+	if not tssLookup.has_key(string.lower(tssId)):
 	    invalidTssHeaderList.append('Line %s: "%s"%s' % (lineNum, lineStripped, CRT))
 	    hasIdErrors = 1
 	else:
-	    if not tssHeaderLookup[string.lower(tssId)] == string.lower(tssTerm):
-		invalidTssTermList.append('Line %s: "%s"  In database: %s%s' % (lineNum, lineStripped, tssHeaderLookup[string.lower(tssId)], CRT))
+	    if not tssLookup[string.lower(tssId)] == string.lower(tssSymbol):
+		invalidTssSymbolList.append('Line %s: "%s"  In database: %s%s' % (lineNum, lineStripped, tssLookup[string.lower(tssId)], CRT))
 		hasIdErrors = 1
 	if not markerLookup.has_key(string.lower(markerId)):
 	    invalidGene %s: "%s"%s' % (lineNum, lineStripped, CRT))
@@ -311,8 +312,8 @@ def runQcChecks ():
 	else:
 	    #print markerLookup[string.lower(markerId)]
 	    #print 'should match:'
-	    #print string.lower(markerTerm)
-	    if not markerLookup[string.lower(markerId)] == string.lower(markerTerm):
+	    #print string.lower(markerSymbol)
+	    if not markerLookup[string.lower(markerId)] == string.lower(markerSymbol):
 		invalidGene %s: "%s"  In database: %s%s' % (lineNum, lineStripped, markerLookup[string.lower(markerId)], CRT))
 		hasIdErrors = 1
 
@@ -358,10 +359,10 @@ def runQcChecks ():
                 fpQcRpt.write(line)
             fpQcRpt.write('\n')
 
-	if len(invalidTssTermList):
-	    fpQcRpt.write('\nInput lines where Tss term does not match term in the database:\n')
+	if len(invalidTssSymbolList):
+	    fpQcRpt.write('\nInput lines where Tss symbol does not match symbol in the database:\n')
             fpQcRpt.write('-----------------------------\n')
-            for line in invalidTssTermList:
+            for line in invalidTssSymbolList:
                 fpQcRpt.write(line)
             fpQcRpt.write('\n')
 
@@ -372,10 +373,10 @@ def runQcChecks ():
                 fpQcRpt.write(line)
             fpQcRpt.write('\n')
 
-	if len(invalidGeneTermList):
-            fpQcRpt.write('\nInput lines where Gene term does not match term in the database:\n')
+	if len(invalidGeneSymbolList):
+            fpQcRpt.write('\nInput lines where Gene symbol does not match symbol in the database:\n')
             fpQcRpt.write('-----------------------------\n')
-            for line in invalidGeneTermList:
+            for line in invalidGeneSymbolList:
                 fpQcRpt.write(line)
             fpQcRpt.write('\n')
 	for line in linesLookedAtDict:
@@ -443,3 +444,4 @@ if hasQcErrors:
     sys.exit(2)
 else:
     sys.exit(0)
+

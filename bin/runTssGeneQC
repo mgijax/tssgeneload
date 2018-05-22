@@ -11,6 +11,14 @@
 #
 ###########################################################################
 
+if [ -z ${MGICONFIG} ]
+then
+        MGICONFIG=/usr/local/mgi/live/mgiconfig
+        export MGICONFIG
+fi
+
+. ${MGICONFIG}/master.config.sh
+
 usage ()
 {
     echo "Usage: runTssGeneQC input_file"
@@ -19,15 +27,11 @@ usage ()
     exit 1
 }
 
-LOADDIR=/usr/local/mgi/live/dataload/tssgeneload
-
-WRAPPER=${LOADDIR}/bin/mpHpoQC.sh
-
 #
 # The tssgeneload product is not installed on all servers, so make sure
 # it exists on this one.
 #
-if [ ! -d ${LOADDIR} ]
+if [ ! -d ${TSSGENELOAD} ]
 then
     echo "The tssgeneload software does not exist on this server"; exit 1
 fi
@@ -46,7 +50,7 @@ else
 fi
 
 #
-# Invoke the QC report wrapper script with the arguments that
+# Invoke the QC report script with the arguments that
 # were passed to this script.
 #
-${WRAPPER} $*
+${TSSGENELOAD}/bin/tssgeneQC.sh $*

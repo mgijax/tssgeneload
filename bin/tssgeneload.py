@@ -5,7 +5,7 @@
 #
 #  Purpose:
 #
-#      Validate input and create feature relationships bcp file
+#      Validate input and create relationships bcp file
 #
 #  Usage:
 #
@@ -15,9 +15,9 @@
 #
 #	1. load-ready TSS/Gene file tab-delimited in the following format
 #	    1. TSS ID
-#	    2. TSS Term
+#	    2. TSS Symbol
 #	    3. Gene ID
-#	    4. Gene Term
+#	    4. Gene Symbol
 #
 #	2. Configuration - see tssgeneload.config
 #
@@ -57,7 +57,7 @@
 #  Date        SE   Change Description
 #  ----------  ---  -------------------------------------------------------
 #
-#  03/30/2016  sc  Initial development
+#  05/22/2018  lec  Initial development
 #
 ###########################################################################
 
@@ -95,8 +95,8 @@ fpRelationshipFile = ''
 # The tssgene relationship category key 'tss_to_gene'
 catKey = 1008
 
-# the tssgene relationship term key 'tss_to_marker'
-relKey = 17396910
+# the tssgene relationship term key 'transcription_start_site'
+relKey = 41697543
 
 # the tssgene qualifier key 'Not Specified'
 qualKey = 11391898
@@ -104,7 +104,7 @@ qualKey = 11391898
 # the tsso_marker evidence key 'Not Specified'
 evidKey = 17396909
 
-# the tssgene reference key 'J:229957'
+# the tssgene reference key 'J:208882'
 refsKey = 209979
 
 # tssgeneload user key
@@ -114,7 +114,7 @@ userKey = 1604
 nextRelationshipKey = 1000	# MGI_Relationship._Relationship_key
 
 # Lookups
-tssHeaderLookup = {}
+tssLookup = {}
 markerLookup = {}
 
 # for bcp
@@ -144,7 +144,7 @@ def init():
     # Effects: Sets global variables, exits if a file can't be opened,
     #  creates files in the file system, creates connection to a database
 
-    global nextRelationshipKey, tssHeaderLookup, markerLookup
+    global nextRelationshipKey, tssLookup, markerLookup
 
     #
     # Open input and output files
@@ -173,34 +173,37 @@ def init():
     #
     # create lookups
     #
-    # lookup of TSS header terms
-    results = db.sql('''select a.accid, t.term, t._Term_key
-        from DAG_Node n, VOC_Term t, ACC_Accession a
-        where n._Label_key = 3
-        and n._Object_key = t._Term_key
-        and t._Vocab_key = 5
-        and t.isObsolete = 0
-        and t._Term_key = a._Object_key
-        and a._MGIType_key = 13
-        and a._LogicalDB_key = 34
+    # lookup of TSS terms
+
+    results = db.sql('''select a.accid, m.symbol
+        from MRK_Marker m, ACC_Accession a
+        where m._Organism_key = 1 
+        and m._Marker_Status_key in (1,3)
+        and m.name like 'transcription start site region %'
+        and m._Marker_key = a._Object_key
+        and a._MGIType_key = 2 
+        and a._LogicalDB_key = 1 
         and a.preferred = 1''', 'auto')
 
     for r in results:
         tssId = string.lower(r['accid'])
-        termKey = r['_Term_key']
-        tssHeaderLookup[tssId] = termKey
+        termKey = r['_Marker_key']
+        tssLookup[tssId] = termKey
 
     # load lookup of Gene terms
-    results = db.sql('''select a.accid, t.term, t._Term_key
-        from VOC_Term t, ACC_Accession a
-        where t._Vocab_key = 106
-        and t._Term_key = a._Object_key
-        and a._MGIType_key = 13
-        and a._LogicalDB_key = 180''', 'auto')
+    results = db.sql('''select a.accid, m.symbol
+        from MRK_Marker m, ACC_Accession a
+        where m._Organism_key = 1 
+        and m._Marker_Status_key in (1,3)
+        and m.name not like 'transcription start site region %'
+        and m._Marker_key = a._Object_key
+        and a._MGIType_key = 2 
+        and a._LogicalDB_key = 1 
+        and a.preferred = 1''', 'auto')
 
     for r in results:
         markerId = string.lower(r['accid'])
-        termKey = r['_Term_key']
+        termKey = r['_Marker_key']
         markerLookup[markerId] = termKey
 
     return
@@ -250,7 +253,7 @@ def closeFiles ():
 # end closeFiles() -------------------------------
 
 def createFiles( ): 
-    # Purpose: parses feature relationship file, does verification
+    # Purpose: parses relationship file, does verification
     #  creates bcp files
     # Returns: Nothing
     # Assumes: file descriptors have been initialized
@@ -265,7 +268,7 @@ def createFiles( ):
     for line in fpInFile.readlines():
 	tokens = map(string.strip, string.split(line, TAB))
         tssId = string.lower(string.strip(tokens[0]))
-	objKey1 = tssHeaderLookup[tssId]
+	objKey1 = tssLookup[tssId]
         markerId = string.lower(string.strip(tokens[2]))
 	objKey2 = markerLookup[markerId]
 
@@ -320,3 +323,4 @@ doDeletes()
 # exit(2) if bcp command fails
 doBcp()
 sys.exit(0)
+
