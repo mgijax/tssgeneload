@@ -135,7 +135,7 @@ STAT=$?
 if [ ${STAT} -eq 0 ]
 then
 echo "No QC errors detected." | tee -a ${LOG}
-    echo "" | tee -a ${LOG}
+echo "" | tee -a ${LOG}
 fi
 
 if [ ${STAT} -eq 1 ]
