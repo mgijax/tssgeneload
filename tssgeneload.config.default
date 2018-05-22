@@ -1,0 +1,106 @@
+#format: sh
+#
+#  tssgeneload.config
+#
+#  This file sets up environment variables that are needed for a specific
+#  data provider input file to be handled by the annotation loader.
+#
+###########################################################################
+
+###########################################################################
+#
+#  GENERAL SETTINGS
+#
+###########################################################################
+
+#
+#  If the MGICONFIG environment variable does not have a local override,
+#  use the default "live" settings.
+#
+if [ "${MGICONFIG}" = "" ]
+then
+    MGICONFIG=/usr/local/mgi/live/mgiconfig
+    export MGICONFIG
+fi
+
+. ${MGICONFIG}/master.config.sh
+
+#  Annotation Loader shell script
+ANNOTLOADER=${ANNOTLOAD}/annotload.csh
+
+export ANNOTLOADER
+
+###########################################################################
+#
+#  LOAD SPECIFIC SETTINGS
+#
+###########################################################################
+
+#  Path name of the archive, logs, reports and output directories
+FILEDIR=${DATALOADSOUTPUT}/tssgeneload
+ARCHIVEDIR=${FILEDIR}/archive
+LOGDIR=${FILEDIR}/logs
+RPTDIR=${FILEDIR}/reports
+OUTPUTDIR=${FILEDIR}/output
+INPUTDIR=${FILEDIR}/input
+
+export FILEDIR ARCHIVEDIR LOGDIR RPTDIR OUTPUTDIR INPUTDIR
+
+# input/output
+INPUT_FILE_DEFAULT=${INPUTDIR}/tssgene.txt
+INPUT_FILE_TOLOAD=${INPUTDIR}/tssgene_toload.txt
+QC_RPT=${RPTDIR}/tssgene_qc.rpt
+RELATIONSHIP_BCP=MGI_Relationship.bcp
+QC_LOGFILE=${LOGDIR}/tssgene_qc.log
+LOAD_QC_SH=${TSSGENELOAD}/bin/tssgeneQC.sh
+export INPUT_FILE_DEFAULT INPUT_FILE_TOLOAD QC_RPT RELATIONSHIP_BCP
+export QC_LOGFILE LOAD_QC_SH
+
+#  Complete path name of the log files
+LOG_FILE=${LOGDIR}/tssgeneload.log
+LOG_PROC=${LOGDIR}/tssgeneload.proc.log
+LOG_DIAG=${LOGDIR}/tssgeneload.diag.log
+LOG_CUR=${LOGDIR}/tssgeneload.cur.log
+LOG_VAL=${LOGDIR}/tssgeneload.val.log
+
+export LOG_FILE LOG_PROC LOG_DIAG LOG_CUR LOG_VAL LOG_DEBUG
+
+# load reference
+JNUM=J:208882
+
+# minumum number of lines expected in the input file
+MIN_LINES=70
+
+# editor creating these annotations
+EDITOR=mgd_dbo
+
+LOAD_QC=${TSSGENELOAD}/bin/tssgeneQC.py
+
+export JNUM MIN_LINES EDITOR LOAD_QC
+
+#  Send debug messages to the diagnostic log (true or false)
+LOG_DEBUG=false
+
+export JNUM EDITOR LOG_DEBUG
+
+#  The name of the job stream for the load
+JOBSTREAM=tssgeneload
+
+export JOBSTREAM
+
+###########################################################################
+#
+#  MISCELLANEOUS SETTINGS
+#
+###########################################################################
+
+#  The name of the load for the subject of an email notification
+MAIL_LOADNAME="TSS-to-Gene relationship load"
+
+#  Recipient list for mailing the log files (comma-separated)
+MAIL_LOG_PROC="mgiadmin"
+
+export MAIL_LOADNAME MAIL_LOG_PROC
+
+INSTALLDIR=${TSSGENELOAD}
+export INSTALLDIR
