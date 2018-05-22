@@ -101,16 +101,16 @@ missingColumnsList = []
 missingTssIdList = []
 
 # input Tss header IDs not in the database
-invalidTssHeaderList = []
+invalidTssIDList = []
 
 # input Tss header symbol does not match symbol in the database
 invalidTssSymbolList = []
 
 # input Gene IDs not in the database
-invalidGene = []
+invalidGeneIDList = []
 
 # input Gene symbol does not match symbol in the database
-invalidGene = []
+invalidGeneList = []
 
 # all passing QC (non-fatal, non-skip)
 linesToLoadList = []
@@ -300,21 +300,21 @@ def runQcChecks ():
 	    continue
 	hasIdErrors = 0
 	if not tssLookup.has_key(string.lower(tssId)):
-	    invalidTssHeaderList.append('Line %s: "%s"%s' % (lineNum, lineStripped, CRT))
+	    invalidTssIDList.append('Line %s: "%s"%s' % (lineNum, lineStripped, CRT))
 	    hasIdErrors = 1
 	else:
 	    if not tssLookup[string.lower(tssId)] == string.lower(tssSymbol):
 		invalidTssSymbolList.append('Line %s: "%s"  In database: %s%s' % (lineNum, lineStripped, tssLookup[string.lower(tssId)], CRT))
 		hasIdErrors = 1
 	if not markerLookup.has_key(string.lower(markerId)):
-	    invalidGene %s: "%s"%s' % (lineNum, lineStripped, CRT))
+	    invalidGeneID.append('Line %s: "%s"%s' % (lineNum, lineStripped, CRT))
             hasIdErrors = 1
 	else:
 	    #print markerLookup[string.lower(markerId)]
 	    #print 'should match:'
 	    #print string.lower(markerSymbol)
 	    if not markerLookup[string.lower(markerId)] == string.lower(markerSymbol):
-		invalidGene %s: "%s"  In database: %s%s' % (lineNum, lineStripped, markerLookup[string.lower(markerId)], CRT))
+		invalidGeneList.append('Line %s: "%s"  In database: %s%s' % (lineNum, lineStripped, markerLookup[string.lower(markerId)], CRT))
 		hasIdErrors = 1
 
 	if hasIdErrors:
@@ -352,10 +352,10 @@ def runQcChecks ():
 		fpQcRpt.write(line)
 	    fpQcRpt.write('\n')
 
-        if len(invalidTssHeaderList):
+        if len(invalidTssIDList):
             fpQcRpt.write('\nInput lines with invalid Tss header IDs:\n')
             fpQcRpt.write('-----------------------------\n')
-            for line in invalidTssHeaderList:
+            for line in invalidTssIDList:
                 fpQcRpt.write(line)
             fpQcRpt.write('\n')
 
@@ -366,17 +366,17 @@ def runQcChecks ():
                 fpQcRpt.write(line)
             fpQcRpt.write('\n')
 
-        if len(invalidGeneList):
+        if len(invalidGeneIDList):
             fpQcRpt.write('\nInput lines with invalid Gene IDs:\n')
             fpQcRpt.write('-----------------------------\n')
-            for line in invalidGeneList:
+            for line in invalidGeneIDList:
                 fpQcRpt.write(line)
             fpQcRpt.write('\n')
 
-	if len(invalidGeneSymbolList):
+	if len(invalidGeneList):
             fpQcRpt.write('\nInput lines where Gene symbol does not match symbol in the database:\n')
             fpQcRpt.write('-----------------------------\n')
-            for line in invalidGeneSymbolList:
+            for line in invalidGeneList:
                 fpQcRpt.write(line)
             fpQcRpt.write('\n')
 	for line in linesLookedAtDict:
