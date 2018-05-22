@@ -8,15 +8,20 @@
 #     tssgeneload.sh 
 #
 
-cd `dirname $0`/..
-CONFIG_LOAD=`pwd`/tssgeneload.config
+if [ -z ${MGICONFIG} ]
+then
+        MGICONFIG=/usr/local/mgi/live/mgiconfig
+        export MGICONFIG
+fi
 
-cd `dirname $0`
-LOG=`pwd`/tssgeneload.log
+. ${MGICONFIG}/master.config.sh
+
+CONFIG=${TSSGENELOAD}/tssgeneload.config
+
+LOG=${TSSGENELOAD}/tssgeneload.log
 rm -rf ${LOG}
 
 USAGE='Usage: tssgeneload.sh'
-SCHEMA='mgd'
 
 #
 #  Verify the argument(s) to the shell script.
@@ -31,20 +36,13 @@ fi
 # verify & source the configuration file
 #
 
-if [ ! -r ${CONFIG_LOAD} ]
+if [ ! -r ${CONFIG} ]
 then
-    echo "Cannot read configuration file: ${CONFIG_LOAD}"
+    echo "Cannot read configuration file: ${CONFIG}"
     exit 1
 fi
 
-. ${CONFIG_LOAD}
-
-#
-# Just a verification of where we are at
-#
-
-echo "MGD_DBSERVER: ${MGD_DBSERVER}"
-echo "MGD_DBNAME: ${MGD_DBNAME}"
+. ${CONFIG}
 
 #
 #  Source the DLA library functions.

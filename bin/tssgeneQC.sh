@@ -57,20 +57,21 @@
 #  05/22/2018  lec  Initial development
 #
 ###########################################################################
-CURRENTDIR=`pwd`
-BINDIR=`dirname $0`
+
+if [ -z ${MGICONFIG} ]
+then
+        MGICONFIG=/usr/local/mgi/live/mgiconfig
+        export MGICONFIG
+fi
+
+. ${MGICONFIG}/master.config.sh
+
+CONFIG=${TSSGENELOAD}/tssgeneload.config
 
 USAGE='Usage: tssgeneQC.sh  filename'
 
 # this is a QC check only run, set LIVE_RUN accordingly
 LIVE_RUN=0; export LIVE_RUN
-
-#
-# Make sure an input file was passed to the script. If the optional "live"
-# argument is given, that means that the output files are located in the
-# /data/loads/... directory, not in the current directory.
-#
-CONFIG=`cd ${BINDIR}/..; pwd`/tssgeneload.config
 
 if [ $# -eq 1 ]
 then
@@ -93,16 +94,6 @@ else
     exit 1
 fi
 
-#
-# If this is not a "live" run, the output, log and report files should reside
-# in the current directory, so tssgene the default settings.
-#
-if [ ${LIVE_RUN} -eq 0 ]
-then
-	QC_RPT=${CURRENTDIR}/`basename ${QC_RPT}`
-	QC_LOGFILE=${CURRENTDIR}/`basename ${QC_LOGFILE}`
-
-fi
 #
 # Make sure the input file exists (regular file or symbolic link).
 #
@@ -130,7 +121,7 @@ rm -f ${QC_RPT}; >${QC_RPT}
 echo "" >> ${LOG}
 date >> ${LOG}
 echo "Run QC checks on the input file" >> ${LOG}
-${LOAD_QC} ${INPUT_FILE}
+${TSSGENELOAD}/bin/tssgeneQC.sh ${INPUT_FILE}
 STAT=$?
 if [ ${STAT} -eq 0 ]
 then
