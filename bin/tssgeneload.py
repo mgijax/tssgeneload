@@ -81,7 +81,7 @@ USAGE='tssgeneload.py'
 #
 
 # input file
-inFile = os.environ['INPUT_FILE_TOLOAD']
+inFile = os.environ['INPUT_FILE_DEFAULT']
 
 # output bcp files
 bcpFile =   os.environ['RELATIONSHIP_BCP']
