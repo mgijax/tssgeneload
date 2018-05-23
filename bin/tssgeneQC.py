@@ -1,12 +1,9 @@
 #!/usr/local/bin/python
-#
-#  tssgeneQC.py
-###########################################################################
+
 #
 #  Purpose:
 #
-#	This script will generate a QC report for the
-#	    Tss-to-Gene Load file
+#	Run QC checks and generate QC report output file
 #
 #  Usage:
 #
@@ -23,12 +20,12 @@
 #          QC_RPT
 #	   
 #  Inputs:
-# 	Tss-to-Gene input file
-#	Columns:
-#	1. Tss ID
-#	2. Tss Symbol
-#	3. Gene ID
-#	4. Gene Symbol
+#
+#       A tab-delimited file in the format:
+#               field 1 : TSS ID (MGI)
+#               field 2 : TSS Symbol
+#               field 3 : Gene ID (MGI)
+#               field 4 : Gene Symbol
 #
 #  Outputs:
 #
@@ -55,20 +52,13 @@
 #
 #  Notes:  None
 #
-###########################################################################
 
 import sys
 import os
 import string
-import re
-import mgi_utils
 import db
 
 USAGE = 'Usage: tssgeneQC.py  inputFile'
-
-#
-#  GLOBALS
-#
 
 # Report file name
 qcRptFile = os.environ['QC_RPT']
@@ -82,40 +72,14 @@ tssLookup = {}
 # {markerID:key, ...}
 markerLookup = {}
 
-# input lines with missing data
-missingDataList = []
-
-# input lines with < 4 columns
-missingColumnsList = []
-
-# input lines with no Tss ID
-missingTssIdList = []
-
-# input Tss header IDs not in the database
-invalidTssIDList = []
-
-# input Tss header symbol does not match symbol in the database
-invalidTssSymbolList = []
-
-# input Gene IDs not in the database
-invalidGeneIDList = []
-
-# input Gene symbol does not match symbol in the database
-invalidGeneList = []
-
-# all passing QC (non-fatal, non-skip)
-linesToLoadList = []
-
-# used to determine duplicated lines in the input file
-#{line:[line numbers], ...}
-linesLookedAtDict = {}
+# error list
+errorList = []
 
 # Counts reported when no fatal errors
-loadCt = 0
+counter = 0
 
 # flags for errors
-hasQcErrors = 0
-hasFatalErrors = 0
+hasError = 0
 
 #
 # Purpose: Validate the arguments to the script.
@@ -145,11 +109,10 @@ def checkArgs ():
 # Throws: Nothing
 #
 def init ():
-    global markerLookup, tssLookup 
+    global tssLookup, markerLookup
 
     openFiles()
    
-    # load lookups 
     # lookup of Tss symbols
     results = db.sql('''select a.accid, m.symbol
 	from MRK_Marker m, ACC_Accession a
@@ -222,8 +185,7 @@ def openFiles ():
 #
 def runQcChecks ():
 
-    global hasQcErrors, hasFatalErrors, loadCt
-    global linesLookedAtDict
+    global hasError, counter
 
     lineNum = 0
 
@@ -234,70 +196,50 @@ def runQcChecks ():
 	# for reporting only
 	lineStripped = string.strip(line)
 
-	if linesLookedAtDict.has_key(line):
-	    #print 'dup line'
-	    linesLookedAtDict[line].append(str(lineNum))
-	    hasFatalErrors = 1
-	    continue
-	else:
-	    #print 'new line' 
-	    linesLookedAtDict[line]= [str(lineNum)]
-
 	tokens = string.split(line, '\t')
 
 	if len(tokens) < 4:
-	    #print 'missing columns line: %s' % lineNum
-	    hasFatalErrors = 1
-	    missingColumnsList.append('Line %s: %s\n' % (lineNum, lineStripped))
-	    continue
-
-	if tokens[0] == '':
-	    #print 'missing Tss ID: %s' % lineNum
-	    hasQcErrors = 1
-	    missingTssIdList.append('Line %s: %s\n' % (lineNum, lineStripped))
+	    errorList.append('Less than 4 fields\n')
+	    errorList.append('Line %s: %s\n' % (lineNum, lineStripped))
+	    hasError = 1
 	    continue
 
 	tssId = string.strip(tokens[0])
 	tssSymbol = string.strip(tokens[1])
 	markerId = string.strip(tokens[2])
-	# strip this token, there may or may not be a line break
 	markerSymbol = string.strip(tokens[3])
-	#print string.lower(tssId)
-	#print string.lower(tssSymbol)
-	#print string.lower(markerId)
-	#print string.lower(markerSymbol)
+
 	if tssId == '' or tssSymbol == '' or markerId == '' or markerSymbol == '':
-	    missingDataList.append('Line %s: "%s"\n' % (lineNum, lineStripped))
-	    #print 'hasFatalErrors missing data'
-	    hasFatalErrors = 1
+	    errorList.append('Missing field\n')
+	    errorList.append('Line %s: "%s"\n' % (lineNum, lineStripped))
+	    hasError = 1
 	    continue
 
-	hasIdErrors = 0
-	if not tssLookup.has_key(string.lower(tssId)):
-	    invalidTssIDList.append('Line %s: "%s"\n' % (lineNum, lineStripped))
-	    hasIdErrors = 1
+	if string.lower(tssId) not in tssLookup:
+	    errorList.append('Invalid TSS ID\n')
+	    errorList.append('Line %s: "%s"\n' % (lineNum, lineStripped))
+	    hasError = 1
+
 	else:
 	    if not tssLookup[string.lower(tssId)] == string.lower(tssSymbol):
-		invalidTssSymbolList.append('Line %s: "%s"  In database: %s\n' % (lineNum, lineStripped, tssLookup[string.lower(tssId)]))
-		hasIdErrors = 1
-	if not markerLookup.has_key(string.lower(markerId)):
-	    invalidGeneID.append('Line %s: "%s"\n' % (lineNum, lineStripped))
-            hasIdErrors = 1
-	else:
-	    #print markerLookup[string.lower(markerId)]
-	    #print 'should match:'
-	    #print string.lower(markerSymbol)
-	    if not markerLookup[string.lower(markerId)] == string.lower(markerSymbol):
-		invalidGeneList.append('Line %s: "%s"  In database: %s\n' % (lineNum, lineStripped, markerLookup[string.lower(markerId)]))
-		hasIdErrors = 1
+	        errorList.append('TSS ID does not match TSS Symbol\n')
+	        errorList.append('Line %s: "%s"\n' % (lineNum, lineStripped))
+		hasError = 1
 
-	if hasIdErrors:
-	    #print 'print hasFatalErrors hasIdErrors'
-	    hasFatalErrors = 1
+	if string.lower(markerId) not in markerLookup:
+	    errorList.append('Invalid Gene ID\n')
+	    errorList.append('Line %s: "%s"\n' % (lineNum, lineStripped))
+            hasError = 1
+	else:
+	    if not markerLookup[string.lower(markerId)] == string.lower(markerSymbol):
+	        errorList.append('Gene ID does not match Gene Symbol\n')
+	        errorList.append('Line %s: "%s"\n' % (lineNum, lineStripped))
+		hasError = 1
+
+	if hasError:
 	    continue
 
-	# If we get here, we have a good record, write it out to the load file
-	loadCt +=1
+	counter +=1
 
     #
     # Report any fatal errors and exit - if found in published file, the load will not run
@@ -305,84 +247,23 @@ def runQcChecks ():
 
     if lineNum < minLines:
 	fpQcRpt.write('\nInput file has < %s lines indicating an incomplete file.' % (minLines))
-	fpQcRpt.write('Total input lines: %s.\n' % (lineNum))
+	fpQcRpt.write('total input lines: %s.\n' % (lineNum))
 	fpQcRpt.write('No other QC checking will be done until this is fixed.\n')
 	closeFiles()
 	sys.exit(3)
 
-    if hasFatalErrors:
+    if hasError:
 
 	fpQcRpt.write('\nThe following errors must be fixed before publishing; if present, the load will not run\n\n')
 	    
-	if len(missingColumnsList):
-	    fpQcRpt.write('\nInput lines with missing columns:\n')
-	    fpQcRpt.write('-----------------------------\n')
-	    for line in missingColumnsList:
-		fpQcRpt.write(line)
-	    fpQcRpt.write('\n')
-
-	if len(missingDataList):
-	    fpQcRpt.write('\nInput lines with missing data:\n')
-	    fpQcRpt.write('-----------------------------\n')
-	    for line in missingDataList:
-		fpQcRpt.write(line)
-	    fpQcRpt.write('\n')
-
-        if len(invalidTssIDList):
-            fpQcRpt.write('\nInput lines with invalid Tss IDs:\n')
-            fpQcRpt.write('-----------------------------\n')
-            for line in invalidTssIDList:
-                fpQcRpt.write(line)
-            fpQcRpt.write('\n')
-
-	if len(invalidTssSymbolList):
-	    fpQcRpt.write('\nInput lines where Tss symbol does not match symbol in the database:\n')
-            fpQcRpt.write('-----------------------------\n')
-            for line in invalidTssSymbolList:
-                fpQcRpt.write(line)
-            fpQcRpt.write('\n')
-
-        if len(invalidGeneIDList):
-            fpQcRpt.write('\nInput lines with invalid Gene IDs:\n')
-            fpQcRpt.write('-----------------------------\n')
-            for line in invalidGeneIDList:
-                fpQcRpt.write(line)
-            fpQcRpt.write('\n')
-
-	if len(invalidGeneList):
-            fpQcRpt.write('\nInput lines where Gene symbol does not match symbol in the database:\n')
-            fpQcRpt.write('-----------------------------\n')
-            for line in invalidGeneList:
-                fpQcRpt.write(line)
-            fpQcRpt.write('\n')
-
-	for line in linesLookedAtDict:
-	    headerWritten = 0
-	    if len(linesLookedAtDict[line]) > 1:
-		if not headerWritten:
-		    fpQcRpt.write('\nDuplicate lines in the input file:\n')
-		    fpQcRpt.write('-----------------------------\n')
-		    headerWritten = 1
-		lineNumString = string.join(linesLookedAtDict[line], ', ')
-		fpQcRpt.write('Lines:%s\t%s' % (lineNumString, ))
-		fpQcRpt.write('\n')
+	for line in errorList:
+	    fpQcRpt.write(line)
+	fpQcRpt.write('\n')
 
 	closeFiles()
         sys.exit(3)
 
-    #
-    # Report any non-fatal errors
-    #
-    if hasQcErrors:
-	fpQcRpt.write('\nThe following errors are non-fatal. These records will be skipped.\n\n')
-	if len(missingTssIdList):
-	    fpQcRpt.write('\nInput lines with missing Tss header ID:\n')
-            fpQcRpt.write('-----------------------------\n')
-            for line in missingTssIdList:
-                fpQcRpt.write(line)
-            fpQcRpt.write('\n')
-
-    print 'Total number that will be loaded: %s\n' % (loadCt)
+    print 'total relationships to be loaded: %s\n' % (counter)
 
     return
 
@@ -407,20 +288,11 @@ def closeFiles ():
 # Main
 #
 
-#print 'checkArgs'
+print 'running TSS-to-Gene sanity checks...'
+
 checkArgs()
-
-#print 'init'
 init()
-
-#print 'runQcChecks'
 runQcChecks()
-
-#print 'closeFiles'
 closeFiles()
-
-if hasQcErrors: 
-    sys.exit(2)
-else:
-    sys.exit(0)
+sys.exit(0)
 
