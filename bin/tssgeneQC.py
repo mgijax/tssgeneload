@@ -211,29 +211,29 @@ def runQcChecks ():
 
 	if tssId == '' or tssSymbol == '' or markerId == '' or markerSymbol == '':
 	    errorList.append('Missing field\n')
-	    errorList.append('Line %s: "%s"\n' % (lineNum, lineStripped))
+	    errorList.append('Line %s: "%s"\n\n' % (lineNum, lineStripped))
 	    hasError = 1
 	    continue
 
 	if string.lower(tssId) not in tssLookup:
 	    errorList.append('Invalid TSS ID\n')
-	    errorList.append('Line %s: "%s"\n' % (lineNum, lineStripped))
+	    errorList.append('Line %s: "%s"\n\n' % (lineNum, lineStripped))
 	    hasError = 1
 
 	else:
 	    if not tssLookup[string.lower(tssId)] == string.lower(tssSymbol):
 	        errorList.append('TSS ID does not match TSS Symbol\n')
-	        errorList.append('Line %s: "%s"\n' % (lineNum, lineStripped))
+	        errorList.append('Line %s: "%s"\n\n' % (lineNum, lineStripped))
 		hasError = 1
 
 	if string.lower(markerId) not in markerLookup:
 	    errorList.append('Invalid Gene ID\n')
-	    errorList.append('Line %s: "%s"\n' % (lineNum, lineStripped))
+	    errorList.append('Line %s: "%s"\n\n' % (lineNum, lineStripped))
             hasError = 1
 	else:
 	    if not markerLookup[string.lower(markerId)] == string.lower(markerSymbol):
 	        errorList.append('Gene ID does not match Gene Symbol\n')
-	        errorList.append('Line %s: "%s"\n' % (lineNum, lineStripped))
+	        errorList.append('Line %s: "%s"\n\n' % (lineNum, lineStripped))
 		hasError = 1
 
 	if hasError:
@@ -246,7 +246,7 @@ def runQcChecks ():
     #
 
     if lineNum < minLines:
-	fpQcRpt.write('\nInput file has < %s lines indicating an incomplete file.' % (minLines))
+	fpQcRpt.write('\nInput file has < %s lines indicating an incomplete file.\n' % (minLines))
 	fpQcRpt.write('total input lines: %s.\n' % (lineNum))
 	fpQcRpt.write('No other QC checking will be done until this is fixed.\n')
 	closeFiles()
