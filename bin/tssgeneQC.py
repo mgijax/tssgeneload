@@ -86,7 +86,6 @@ hasError = 0
 # Returns: Nothing
 # Assumes: Nothing
 # Effects: sets global variable
-# Throws: Nothing
 #
 def checkArgs ():
     global inputFile
@@ -106,9 +105,9 @@ def checkArgs ():
 # Returns: Nothing
 # Assumes: Nothing
 # Effects: opens files
-# Throws: Nothing
 #
 def init ():
+
     global tssLookup, markerLookup
 
     openFiles()
@@ -117,7 +116,7 @@ def init ():
     results = db.sql('''select a.accid, m.symbol
 	from MRK_Marker m, ACC_Accession a
 	where m._Organism_key = 1
-	and m._Marker_Status_key in (1,3)
+	and m._Marker_Status_key in (1)
 	and m.name like 'transcription start site region %'
 	and m._Marker_key = a._Object_key
 	and a._MGIType_key = 2
@@ -133,7 +132,7 @@ def init ():
     results = db.sql('''select a.accid, m.symbol
 	from MRK_Marker m, ACC_Accession a
 	where m._Organism_key = 1
-	and m._Marker_Status_key in (1,3)
+	and m._Marker_Status_key in (1)
 	and m.name not like 'transcription start site region %'
 	and m._Marker_key = a._Object_key
 	and a._MGIType_key = 2
@@ -153,9 +152,9 @@ def init ():
 # Returns: Nothing
 # Assumes: Nothing
 # Effects: Sets global variables.
-# Throws: Nothing
 #
 def openFiles ():
+
     global fpInfile, fpQcRpt
 
     # curator input file
@@ -181,7 +180,6 @@ def openFiles ():
 # Returns: Nothing
 # Assumes: Nothing
 # Effects: sets global variables, write report to file system
-# Throws: Nothing
 #
 def runQcChecks ():
 
@@ -274,12 +272,14 @@ def runQcChecks ():
 # Returns: Nothing
 # Assumes: Nothing
 # Effects: Nothing
-# Throws: Nothing
 #
 def closeFiles ():
+
     global fpInfile, fpQcRpt
+
     fpInfile.close()
     fpQcRpt.close()
+
     return
 
 # end closeFiles() -------------------------------------

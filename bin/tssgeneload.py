@@ -91,13 +91,13 @@ nextRelationshipKey = 1000	# MGI_Relationship._Relationship_key
 tssLookup = {}
 markerLookup = {}
 
+#
+# Purpose: create lookups, open files, create db connection, gets max keys from the db
+# Returns: Nothing
+# Assumes: Nothing
+# Effects: Sets global variables, exits if a file can't be opened,
+#
 def init():
-    # Purpose: create lookups, open files, create db connection, gets max
-    #	keys from the db
-    # Returns: Nothing
-    # Assumes: Nothing
-    # Effects: Sets global variables, exits if a file can't be opened,
-    #  creates files in the file system, creates connection to a database
 
     global nextRelationshipKey, tssLookup, markerLookup
 
@@ -162,12 +162,12 @@ def init():
 
 # end init() -------------------------------
 
+# Purpose: Open input/output files.
+# Returns: exit 1 if cannot open input or output file
+# Assumes: Nothing
+# Effects: sets global variables, exits if a file can't be opened
+#
 def openFiles ():
-    # Purpose: Open input/output files.
-    # Returns: Nothing
-    # Assumes: Nothing
-    # Effects: Sets global variables, exits if a file can't be opened, 
-    #  creates files in the file system
 
     global fpInFile, fpRelationshipFile
 
@@ -187,13 +187,13 @@ def openFiles ():
 
 # end openFiles() -------------------------------
 
-
+#
+# Purpose: Close the files.
+# Returns: Nothing
+# Assumes: Nothing
+# Effects: Nothing
+#
 def closeFiles ():
-    # Purpose: Close all file descriptors
-    # Returns: Nothing
-    # Assumes: all file descriptors were initialized
-    # Effects: Nothing
-    # Throws: Nothing
 
     global fpInFile, fpRelationshipFile
 
@@ -204,13 +204,12 @@ def closeFiles ():
 
 # end closeFiles() -------------------------------
 
+# Purpose: parses relationship file, does verification, creates bcp files
+# Returns: Nothing
+# Assumes: file descriptors have been initialized
+# Effects: sets global variables, writes to the file system
+#
 def createFiles( ): 
-    # Purpose: parses relationship file, does verification
-    #  creates bcp files
-    # Returns: Nothing
-    # Assumes: file descriptors have been initialized
-    # Effects: sets global variables, writes to the file system
-    # Throws: Nothing
 
     global nextRelationshipKey
 
@@ -234,6 +233,11 @@ def createFiles( ):
 
 # end createFiles() -------------------------------------
 
+# Purpose: deletes existing relationships
+# Returns: None
+# Assumes: None
+# Effects: None
+#
 def doDeletes():
     db.sql('''delete from MGI_Relationship where _CreatedBy_key = %s ''' % userKey, None)
     db.commit()
@@ -242,6 +246,11 @@ def doDeletes():
 
 # end doDeletes() -------------------------------------
 
+# Purpose: loads bcp file
+# Returns: exist 2 if bcp fails
+# Assumes: None
+# Effects: None
+#
 def bcpFiles():
 
     bcpCommand = os.environ['PG_DBUTILS'] + '/bin/bcpin.csh'
