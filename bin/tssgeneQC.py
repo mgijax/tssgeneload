@@ -113,7 +113,7 @@ def init ():
     openFiles()
    
     # lookup of Tss symbols
-    results = db.sql('''select a.accid, m.symbol
+    results = db.sql('''select a.accid, m.symbol, m.chromosome
 	from MRK_Marker m, ACC_Accession a
 	where m._Organism_key = 1
 	and m._Marker_Status_key in (1)
@@ -126,10 +126,10 @@ def init ():
     for r in results:
         tssId = string.lower(r['accid'])
 	symbol = string.lower(r['symbol'])
-	tssLookup[tssId] = symbol
+	tssLookup[tssId] = (symbol, r['chromosome'])
 
     # load lookup of Gene symbols
-    results = db.sql('''select a.accid, m.symbol
+    results = db.sql('''select a.accid, m.symbol, m.chromosome
 	from MRK_Marker m, ACC_Accession a
 	where m._Organism_key = 1
 	and m._Marker_Status_key in (1)
@@ -142,7 +142,7 @@ def init ():
     for r in results:
 	markerId = string.lower(r['accid'])
         symbol = string.lower(r['symbol'])
-	markerLookup[markerId] = symbol
+	markerLookup[markerId] = (symbol, r['chromosome'])
 
     return
 
@@ -219,7 +219,7 @@ def runQcChecks ():
 	    hasError = 1
 
 	else:
-	    if not tssLookup[string.lower(tssId)] == string.lower(tssSymbol):
+	    if not tssLookup[string.lower(tssId)][0] == string.lower(tssSymbol):
 	        errorList.append('TSS ID does not match TSS Symbol\n')
 	        errorList.append('Line %s: "%s"\n\n' % (lineNum, lineStripped))
 		hasError = 1
@@ -229,7 +229,7 @@ def runQcChecks ():
 	    errorList.append('Line %s: "%s"\n\n' % (lineNum, lineStripped))
             hasError = 1
 	else:
-	    if not markerLookup[string.lower(markerId)] == string.lower(markerSymbol):
+	    if not markerLookup[string.lower(markerId)][0] == string.lower(markerSymbol):
 	        errorList.append('Gene ID does not match Gene Symbol\n')
 	        errorList.append('Line %s: "%s"\n\n' % (lineNum, lineStripped))
 		hasError = 1
