@@ -234,12 +234,13 @@ def runQcChecks ():
 		hasError = 1
 
 	if string.lower(tssId) in tssLookup and string.lower(markerId) in markerLookup:
-	    if not tssLookup[string.lower(tssId)][1] == markerLookup[string.lower(markerId)][1]:
-	        errorList.append('TSS Chromosome does not match Gene Chromosome\n')
-		errorList.append('TSS Chromosome : ' + tssLookup[string.lower(tssId)][1] + '\n')
-		errorList.append('Gene Chromosome : ' + markerLookup[string.lower(markerId)][1] + '\n')
-	        errorList.append('Line %s: "%s"\n\n' % (lineNum, lineStripped))
-		hasError = 1
+	    if tssLookup[string.lower(tssId)][1] != "UN" and markerLookup[string.lower(markerId)][1] != "UN":
+	        if not tssLookup[string.lower(tssId)][1] == markerLookup[string.lower(markerId)][1]:
+	            errorList.append('TSS Chromosome does not match Gene Chromosome\n')
+		    errorList.append('TSS Chromosome : ' + tssLookup[string.lower(tssId)][1] + '\n')
+		    errorList.append('Gene Chromosome : ' + markerLookup[string.lower(markerId)][1] + '\n')
+	            errorList.append('Line %s: "%s"\n\n' % (lineNum, lineStripped))
+		    hasError = 1
 
 	if hasError:
 	    continue
