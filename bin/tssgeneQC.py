@@ -227,11 +227,11 @@ def runQcChecks ():
 	    errorList.append('Invalid Gene ID\n')
 	    errorList.append('Line %s: "%s"\n\n' % (lineNum, lineStripped))
             hasError = 1
-	else:
-	    if not markerLookup[string.lower(markerId)][0] == string.lower(markerSymbol):
-	        errorList.append('Gene ID does not match Gene Symbol\n')
-	        errorList.append('Line %s: "%s"\n\n' % (lineNum, lineStripped))
-		hasError = 1
+	#else:
+	#    if not markerLookup[string.lower(markerId)][0] == string.lower(markerSymbol):
+	#        errorList.append('Gene ID does not match Gene Symbol\n')
+	#        errorList.append('Line %s: "%s"\n\n' % (lineNum, lineStripped))
+	#	hasError = 1
 
 	if string.lower(tssId) in tssLookup and string.lower(markerId) in markerLookup:
 	    if tssLookup[string.lower(tssId)][1] != "UN" and markerLookup[string.lower(markerId)][1] != "UN":
