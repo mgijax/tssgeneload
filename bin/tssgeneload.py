@@ -1,17 +1,12 @@
-#!/usr/local/bin/python
-
-#
 #  Purpose:
 #
-#      To process TSS input file
+#      Find Genes that overlap TSS genes and
+#       and load TSS/Gene relationships
 #
 #  Inputs:
 #
-#       A tab-delimited file in the format:
-#		field 1 : TSS ID (MGI)
-#		field 2 : TSS Symbol
-#		field 3 : Gene ID (MGI)
-#		field 4 : Gene Symbol
+#       TSS coordinates in the database
+#	Gene coordinates in the database
 #
 #  Outputs:
 #
@@ -33,17 +28,16 @@
 #
 #      1) Validate the arguments to the script.
 #      2) Perform initialization steps.
-#      3) Open the input/output files.
-#      4) Run the QC  checks
-#      5) Run the load if QC checks pass
-#      6) Close the input/output files.
-#      7) Delete existing relationships
-#      8) BCP in new relationships:
+#      3) Query DB for TSS Coordinates and Gene coordinates
+#      4) Determine TSS/Gene overlap
+#      5) Write out to relationship bcp
+#      6) Delete existing relationships
+#      7) BCP in new relationships:
 #
 # History:
 #
-# lec	05/22/2018
-#	- TR12734/GenFeVah/Fantom 5/TSS
+# sc	10/15/2020
+#	- TR13349/B39
 #
 
 import sys
@@ -54,17 +48,19 @@ import mgi_utils
 
 #db.setTrace()
 
+CRT = '\n'
+TAB = '\t'
+
 # from configuration file
 user = os.environ['MGD_DBUSER']
 passwordFileName = os.environ['MGD_DBPASSWORDFILE']
-inFile = os.environ['INPUT_FILE_DEFAULT']
 outputDir = os.environ['OUTPUTDIR']
+reportDir = os.environ['RPTDIR']
 bcpFile = 'MGI_Relationship.bcp'
 relationshipFile = '%s/%s' % (outputDir, bcpFile)
 
 cdate  = mgi_utils.date("%m/%d/%Y")
-fpInFile = ''
-fpRelationshipFile = ''
+fpRelationship = ''
 
 # The tssgene relationship category key 'tss_to_gene'
 catKey = 1008
@@ -88,8 +84,79 @@ userKey = 1604
 nextRelationshipKey = 1000	# MGI_Relationship._Relationship_key
 
 # Lookups
+# {mgiID:[chr, str, start, end], ...}
 tssLookup = {}
-markerLookup = {}
+
+# gene lookups 
+# p1 :  plus strand, chr 1
+# m1 :  minus strand, chr1
+p1Lookup = {}
+m1Lookup = {}
+p2Lookup = {}
+m2Lookup = {}
+p3Lookup = {}
+m3Lookup = {}
+p4Lookup = {}
+m4Lookup = {}
+p5Lookup = {}
+m5Lookup = {}
+p6Lookup = {}
+m6Lookup = {}
+p7Lookup = {}
+m7Lookup = {}
+p8Lookup = {}
+m8Lookup = {}
+p9Lookup = {}
+m9Lookup = {}
+p10Lookup = {}
+m10Lookup = {}
+p11Lookup = {}
+m11Lookup = {}
+p12Lookup = {}
+m12Lookup = {}
+p13Lookup = {}
+m13Lookup = {}
+p14Lookup = {}
+m14Lookup = {}
+p15Lookup = {}
+m15Lookup = {}
+p16Lookup = {}
+m16Lookup = {}
+p17Lookup = {}
+m17Lookup = {}
+p18Lookup = {}
+m18Lookup = {}
+p19Lookup = {}
+m19Lookup = {}
+pXLookup = {}
+mXLookup = {}
+pYLookup = {}
+mYLookup = {}
+pXYLookup = {}
+mXYLookup = {}
+pUNLookup = {}
+mUNLookup = {}
+pMTLookup = {}
+mMTLookup = {}
+
+# Reporting:
+# {tssKey: {[withinAttribsDict, 2KbAttribsDict]}
+within2KbTie = {}
+
+# # {tssKey: {[withinAttribsDict, 2KbAttribsDict]}
+within2KBwithinClosest = {}
+
+# {tssKey: {[withinAttribsDict, 2KbAttribsDict]}
+within2Kb2KbClosest = {}
+
+# {tssKey: withinAttribsDict
+onlyWithin = {}
+
+#{tssKey: 2kbAttribsDict}
+only2Kb = {}
+
+# #{tssKey: tssAttribs}
+noGene = {}
 
 #
 # Purpose: create lookups, open files, create db connection, gets max keys from the db
@@ -99,7 +166,15 @@ markerLookup = {}
 #
 def init():
 
-    global nextRelationshipKey, tssLookup, markerLookup
+    global nextRelationshipKey, tssLookup, p1Lookup, m1Lookup, p21Lookup
+    global m2Lookup, p3Lookup, m3Lookup, p4Lookup, m4Lookup, p5Lookup, m5Lookup
+    global p6Lookup, m6Lookup, p7Lookup, m7Lookup, p8Lookup, m8Lookup, p9Lookup
+    global m9Lookup, p10Lookup, m10Lookup, p11Lookup, m11Lookup, p12Lookup 
+    global m12Lookup, p13Lookup, m13Lookup, p14Lookup, m14Lookup, p15Lookup 
+    global m15Lookup, p16Lookup, m16Lookup,p17Lookup, m17Lookup, p18Lookup 
+    global m18Lookup, p19Lookup, m19Lookup, pXLookup, mXLookup, pYLookup
+    global mYLookup, pUNLookup, mUNLookup, mXYLookup, pXYLookup, pMTLookup
+    global mMTLookup
 
     #
     # Open input and output files
@@ -118,46 +193,69 @@ def init():
     #
     results = db.sql('''select max(_Relationship_key) + 1 as nextKey from MGI_Relationship''', 'auto')
     if results[0]['nextKey'] is None:
-	nextRelationshipKey = 1000
+        nextRelationshipKey = 1000
     else:
-	nextRelationshipKey = results[0]['nextKey']
+        nextRelationshipKey = results[0]['nextKey']
 
     #
     # create lookups
     #
-    # lookup of TSS terms
+    # lookup of TSS markers
 
-    results = db.sql('''select a.accid, m._Marker_key
-        from MRK_Marker m, ACC_Accession a
-        where m._Organism_key = 1 
+    results = db.sql('''select a.accid, m.symbol, m._Marker_key, lc.chromosome, lc.strand,
+            cast(lc.startCoordinate as int) as start, 
+            cast(lc.endCoordinate as int) as end
+        from MRK_Marker m, ACC_Accession a, MRK_Location_Cache lc
+        where m._Organism_key = 1
         and m._Marker_Status_key in (1,3)
         and m.name like 'transcription start site region %'
         and m._Marker_key = a._Object_key
-        and a._MGIType_key = 2 
-        and a._LogicalDB_key = 1 
-        and a.preferred = 1''', 'auto')
+        and a._MGIType_key = 2
+        and a._LogicalDB_key = 1
+        and a.preferred = 1
+        and m._Marker_key = lc._Marker_key
+        and lc.startCoordinate is not null
+        and lc.endCoordinate is not null''', 'auto')
 
     for r in results:
-        tssId = string.lower(r['accid'])
-        termKey = r['_Marker_key']
-        tssLookup[tssId] = termKey
+        tssId = str.lower(r['accid'])
+        markerKey = r['_Marker_key']
+        tssLookup[markerKey] = [r['chromosome'], r['strand'], int(r['start']), int(r['end']), r['accid'], r['symbol']]
 
-    # load lookup of Gene terms
-    results = db.sql('''select a.accid, m._Marker_key
-        from MRK_Marker m, ACC_Accession a
+    # load lookup of Gene terms - exclude null strand and feature type
+    # heritable phenotypic marker
+    results = db.sql('''select a.accid, m.symbol, m._Marker_key, lc.chromosome, lc.strand,
+            cast(lc.startCoordinate as int) as start, cast(lc.endCoordinate as int) as end
+        from MRK_Marker m, ACC_Accession a, MRK_Location_Cache lc,
+            VOC_Annot v
         where m._Organism_key = 1 
         and m._Marker_Status_key in (1,3)
+        and m._Marker_Type_key in (1, 7)
         and m.name not like 'transcription start site region %'
         and m._Marker_key = a._Object_key
         and a._MGIType_key = 2 
         and a._LogicalDB_key = 1 
-        and a.preferred = 1''', 'auto')
+        and a.preferred = 1
+        and m._Marker_key = lc._Marker_key
+        and lc.startCoordinate is not null
+        and lc.endCoordinate is not null
+        and lc.strand is not null
+        and m._Marker_key = v._Object_key
+        and v._AnnotType_key = 1011
+        and v._Term_key != 6238170''', 'auto')
 
     for r in results:
-        markerId = string.lower(r['accid'])
-        termKey = r['_Marker_key']
-        markerLookup[markerId] = termKey
-
+        geneId = str.lower(r['accid'])
+        markerKey = r['_Marker_key']
+        strand = 'p'    # plus strand
+        if r['strand'] == '-': # minus strand
+             strand = 'm'
+        prefix = '%s%s' % (strand, r['chromosome'])
+        currentLookup = eval('%sLookup' % (prefix))
+        currentLookup[markerKey] = [r['chromosome'], r['strand'], int(r['start']), int(r['end']), r['accid'], r['symbol']]
+        #print(('%sLookup' % prefix))
+        #print('%s %s' %(geneId, r['_Marker_key']))
+        #print((currentLookup[geneId]))
     return
 
 # end init() -------------------------------
@@ -169,19 +267,50 @@ def init():
 #
 def openFiles ():
 
-    global fpInFile, fpRelationshipFile
+    global fpRelationship, fpWithin2KbTie, fpWithin2KbWithinClosest
+    global fpWithin2Kb2KbClosest, fpOnlyWithin, fpOnly2Kb, fpNoGene
 
     try:
-        fpInFile = open(inFile, 'r')
+        fpRelationship = open(relationshipFile, 'w')
     except:
-        print 'Cannot open relationships input file: %s' % inFile
+        print(('Cannot open relationships bcp file: %s' % relationshipFile))
+        sys.exit(1)
+    try:
+        fpWithin2KbTie = open('%s/Within2KbTie.rpt' % reportDir, 'w')
+    except:
+        print(('Cannot open Within2KbTie file: %s' % relationshipFile))
         sys.exit(1)
 
     try:
-        fpRelationshipFile = open(relationshipFile, 'w')
+        fpWithin2KbWithinClosest = open('%s/Within2KBwithinClosest.rpt' % reportDir, 'w')
     except:
-        print 'Cannot open relationships bcp file: %s' % relationshipFile
+        print(('Cannot open Within2KBwithinClosest file: %s' % relationshipFile))
         sys.exit(1)
+
+    try:
+        fpWithin2Kb2KbClosest = open('%s/Within2Kb2KbClosest.rpt' % reportDir, 'w')
+    except:
+        print(('Cannot open Within2KB2KbClosest file: %s' % relationshipFile))
+        sys.exit(1)
+
+    try:
+        fpOnlyWithin = open('%s/OnlyWithin.rpt' % reportDir, 'w')
+    except:
+        print(('Cannot open OnlyWithin file: %s' % relationshipFile))
+        sys.exit(1)
+
+    try:
+        fpOnly2Kb = open('%s/Only2Kb.rpt' % reportDir, 'w')
+    except:
+        print(('Cannot open Only2Kb file: %s' % relationshipFile))
+        sys.exit(1)
+
+    try:
+        fpNoGene = open('%s/NoGene.rpt' % reportDir, 'w')
+    except:
+        print(('Cannot open NoGene file: %s' % relationshipFile))
+        sys.exit(1)
+
 
     return
 
@@ -195,43 +324,197 @@ def openFiles ():
 #
 def closeFiles ():
 
-    global fpInFile, fpRelationshipFile
+    global fpRelationship, fpWithin2KbTie, fpWithin2KbWithinClosest
+    global fpWithin2Kb2KbClosest, fpOnlyWithin, fpOnly2Kb, fpNoGene
 
-    fpInFile.close()
-    fpRelationshipFile.close()
+    fpRelationship.close()
+    fpWithin2KbTie.close()
+    fpWithin2KbWithinClosest.close()
+    fpWithin2Kb2KbClosest.close() 
+    fpOnlyWithin.close()
+    fpOnly2Kb.close()
+    fpNoGene.close()
 
     return
 
 # end closeFiles() -------------------------------
 
-# Purpose: parses relationship file, does verification, creates bcp files
+# Purpose: Determines TSS/Gene overlaps, writes to relationship bcp
 # Returns: Nothing
 # Assumes: file descriptors have been initialized
 # Effects: sets global variables, writes to the file system
 #
-def createFiles( ): 
+def findRelationships( ): 
 
     global nextRelationshipKey
 
     #
-    # Iterate through the load ready input file
+    # Iterate through the TSS genes
     #
-    for line in fpInFile.readlines():
-	tokens = map(string.strip, string.split(line, '\t'))
-        tssId = string.lower(string.strip(tokens[0]))
-	objKey1 = tssLookup[tssId]
-        markerId = string.lower(string.strip(tokens[2]))
-	objKey2 = markerLookup[markerId]
+    print("len(tssLookup): %s" % len(tssLookup))
+    for tMarkerKey in tssLookup:
+        #print(tMarkerKey)
+        attribList = tssLookup[tMarkerKey]
+        tChromosome = attribList[0]
+        #if tChromosome != '1':
+        #    continue
+        tStrand = attribList[1]
+        tStart = attribList[2]
+        tEnd = attribList[3]
+        tAccid = attribList[4]
+        tSymbol = attribList[5]
 
-	# MGI_Relationship
-	fpRelationshipFile.write('%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s\n' % \
-	    (nextRelationshipKey, catKey, objKey1, objKey2, relKey, qualKey, evidKey, refsKey, userKey, userKey, cdate, cdate))
+        #print('type tStart: %s' % type(tStart))
+        #print('type tEnd: %s' % type(tEnd))
+        tMidPoint = int(tEnd-((tEnd-tStart+1)/2)) # cast to int for rounding
+        #print('type tMidPoint: %s' % type(tMidPoint))
+        print('tMarkerKey: %s tAccid: %s tSymbol: %s tChromosome: %s tStrand: %s tStart: %s tEnd: %s tMidPoint: %s' % (tMarkerKey, tAccid, tSymbol, tChromosome, tStrand, tStart, tEnd, tMidPoint))
 
-	nextRelationshipKey += 1
+        tStrand = 'p'    # plus strand
+        if tStrand == '-': # minus strand
+             tStrand = 'm'
+        prefix = '%s%s' % (tStrand, tChromosome)
+        geneLookup = eval('%sLookup' % prefix)
+        
+        currentWithinGenes = {}
+        current2KBGenes = {}
+        for gMarkerKey in geneLookup:
+            gChromosome = geneLookup[gMarkerKey][0]
+            gStrand =  geneLookup[gMarkerKey][1]
+            gStart = geneLookup[gMarkerKey][2]
+            gEnd = geneLookup[gMarkerKey][3]
+            gAccid = geneLookup[gMarkerKey][4]
+            gSymbol = geneLookup[gMarkerKey][5]
+            #print('type gStart: %s' % type(gStart))
+            #print('type gEnd: %s' % type(gEnd))
+            # TSS midpoint <= 2KB upstream of gene start site
+            # + tss strand upstream is < downstream
+            twoKBup = None
+            if tStrand == '+':
+                twoKBup = gStart - 2000
+            else: # tss strand is '-', downstream > upstream
+                twoKBup = gEnd + 2000
+            print('gMarkerKey: %s gAccid: %s gSymbol: %s gChromosome: %s gStrand: %s gStart: %s gEnd: %s twoKBup: %s' % (gMarkerKey, gAccid, gSymbol, gChromosome, gStrand, gStart, gEnd, twoKBup))
+
+            # TSS midpoint within the Gene
+            if tMidPoint >= gStart and tMidPoint <= gEnd:
+                print('saving tss midpoint within gene')
+                currentWithinGenes[gMarkerKey] = geneLookup[gMarkerKey]
+                print('gMarkerKey: %s gAccid: %s gSymbol: %s gChromosome: %s gStrand: %s gStart: %s gEnd: %s' % (gMarkerKey, gAccid, gSymbol, gChromosome, gStrand, gStart, gEnd))
+            # if midpoint within gene, don't look at 2KB up of same gene
+            elif tMidPoint <= twoKBup:
+                print('saving tss midpoint within twoKBUp')
+                # save the gene to the current set for this TSS
+                current2KBGenes[gMarkerKey] = geneLookup[gMarkerKey]            
+                print('gMarkerKey: %s gAccid: %s gSymbol: %s gChromosome: %s gStrand: %s gStart: %s gEnd: %s twoKBup: %s' % (gMarkerKey, gAccid, gSymbol, gChromosome, gStrand, gStart, gEnd, twoKBup))
+      
+        # Find the gene where start site is closest to the TSS midpoint
+        # Do this separately for within and 2KB
+        print('look for currentWithinClosestStart and currentWithinBestGene')
+        currentWithinClosestStart = None
+        currentWithinBestGene = ''
+        for mKey in currentWithinGenes:
+           gStrand = currentWithinGenes[mKey][1]
+           gStart = currentWithinGenes[mKey][2]
+           ss = abs(tMidPoint - gStart)
+           print('ss: %s' % ss)
+           if currentWithinClosestStart == None:
+               currentWithinClosestStart = ss 
+               currentWithinBestGene = mKey
+               continue
+           if ss <= currentWithinClosestStart:
+               currentWithinClosestStart = ss 
+               currentWithinBestGene = mKey
+           print('currentWithinClosestStart:%s currentWithinBestGene: %s' % (currentWithinClosestStart, currentWithinBestGene))
+
+        print('look for current2KBClosestStart and current2KBBestGene')
+        current2KBClosestStart = None
+        current2KBBestGene = ''
+        for mKey in current2KBGenes:
+           gStrand = current2KBGenes[mKey][1]
+           gStart = current2KBGenes[mKey][2]
+           ss = abs(tMidPoint - gStart)
+           print('ss: %s' % ss)
+           if current2KBClosestStart == None:
+               current2KBClosestStart = ss
+               current2KBBestGene = mKey
+               continue
+           if ss <= current2KBClosestStart:
+               current2KBClosestStart = ss
+               current2KBBestGene = mKey
+           print('current2KBClosestStart:%s current2KBBestGene: %s' % (current2KBClosestStart, current2KBBestGene))
+        # now choose the gene to create the relationship with
+        print('now chose the gene to create the relationship with')
+        print ('currentWithinBestGene: %s currentWithinClosestStart: %s current2KBBestGene: %s current2KBClosestStart: %s' % (currentWithinBestGene, currentWithinClosestStart, current2KBBestGene, current2KBClosestStart))
+        geneKeyToUse = ''
+
+        # if no gene, skip
+        if currentWithinBestGene == '' and current2KBBestGene == '':
+            print('F! No gene for tssMarker: %s attributes: %s' % (tMarkerKey, attribList))
+            noGene[tMarkerKey] = (tssLookup[tMarkerKey])
+            continue
+        if currentWithinBestGene != '' and current2KBBestGene != '':
+            if currentWithinClosestStart == current2KBClosestStart:
+                print('A! currentWithinClosestStart: %s == current2KBClosestStart: %s, pick currentWithinBestGene: %s' % (currentWithinClosestStart,  current2KBClosestStart, currentWithinBestGene))
+                within2KbTie[tMarkerKey] = [currentWithinGenes]
+                within2KbTie[tMarkerKey].append(current2KBGenes)
+                geneKeyToUse = currentWithinBestGene
+            elif currentWithinClosestStart < current2KBClosestStart:
+                print('B! currentWithinClosestStart:%s < current2KBClosestStart: %s, pick currentWithinBestGene: %s' % (currentWithinClosestStart, current2KBClosestStart, currentWithinBestGene))
+                within2KBwithinClosest[tMarkerKey] = [currentWithinGenes]
+                within2KBwithinClosest[tMarkerKey].append(current2KBGenes)
+                geneKeyToUse = currentWithinBestGene
+            else:
+                print('C! current2KBClosestStart:%s < currentWithinClosestStart: %s, pick currentsKBBestGene: %s' % (current2KBClosestStart, currentWithinClosestStart, current2KBBestGene))
+                within2Kb2KbClosest[tMarkerKey] = [currentWithinGenes]
+                within2Kb2KbClosest[tMarkerKey].append(current2KBGenes)
+                geneKeyToUse = current2KBBestGene
+        elif currentWithinBestGene != '':
+            print('D! pick currentWithinBestGene: %s' % currentWithinBestGene)
+            onlyWithin[tMarkerKey] = currentWithinGenes
+            geneKeyToUse = currentWithinBestGene
+        else:
+            print('E! pick current2KBBestGene: %s' % current2KBBestGene)
+            only2Kb[tMarkerKey] = current2KBGenes
+            geneKeyToUse = current2KBBestGene
+        
+            
+        objKey1 = tMarkerKey 
+        objKey2 = geneKeyToUse
+        # MGI_Relationship
+        fpRelationship.write('%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s\n' % \
+            (nextRelationshipKey, catKey, objKey1, objKey2, relKey, qualKey, evidKey, refsKey, userKey, userKey, cdate, cdate))
+
+        nextRelationshipKey += 1
     
     return
 
-# end createFiles() -------------------------------------
+# end findRelationships() -------------------------------------
+
+# Purpose: deletes existing relationships
+# Returns: None
+# Assumes: None
+# Effects: None
+#
+def writeReports():
+
+    for tssKey in within2KbTie:
+        fpWithin2KbTie.write('%s within: %s%s' % (tssKey, within2KbTie[tssKey][0], CRT))
+        fpWithin2KbTie.write('%s 2KB: %s%s' % (tssKey, within2KbTie[tssKey][1], CRT))
+    for tssKey in within2KBwithinClosest:
+        fpWithin2KbWithinClosest.write('%s within: %s%s' % (tssKey, within2KBwithinClosest[tssKey][0], CRT))
+        fpWithin2KbWithinClosest.write('%s  2KB: %s%s' % (tssKey, within2KBwithinClosest[tssKey][1], CRT))
+    for tssKey in within2Kb2KbClosest:
+        fpWithin2Kb2KbClosest.write('%s within: %s%s' % (tssKey, within2Kb2KbClosest[tssKey][0], CRT))
+        fpWithin2Kb2KbClosest.write('%s 2KB: %s%s' % (tssKey, within2Kb2KbClosest[tssKey][1], CRT))
+    for tssKey in onlyWithin:
+        fpOnlyWithin.write('%s %s%s' % (tssKey, onlyWithin[tssKey], CRT))
+    for tssKey in only2Kb:
+        fpOnly2Kb.write('%s %s%s' % (tssKey, only2Kb[tssKey], CRT))
+    for tssKey in noGene:
+        fpNoGene.write('%s %s%s' % (tssKey, noGene[tssKey], CRT))
+
+    return
 
 # Purpose: deletes existing relationships
 # Returns: None
@@ -260,7 +543,7 @@ def bcpFiles():
 
     rc = os.system(bcpCmd)
 
-    if rc <> 0:
+    if rc != 0:
         closeFiles()
         sys.exit(2)
 
@@ -272,20 +555,36 @@ def bcpFiles():
 # Main
 #
 
+print('%s' % mgi_utils.date())
+print ('init()')
 # exit(1) if errors opening files
 init()
 
-# validate data and create load bcp files
-createFiles()
+print('%s' % mgi_utils.date())
+print('findRelationships()')
+# determine overlaps and create relationship bcp file
+findRelationships()
 
-# close all output files
-closeFiles()
+print('%s' % mgi_utils.date())
+print('writeReports()')
+# write out info for each bucket of relationships
+writeReports()
 
+print('%s' % mgi_utils.date())
+print('doDeletes()')
 # delete existing relationships
 doDeletes()
 
+print('%s' % mgi_utils.date())
+print('closeFiles()')
+# close all output files
+closeFiles()
+
+print('%s' % mgi_utils.date())
+print('bcpFiles()')
 # exit(2) if bcp command fails
 bcpFiles()
 
+print('%s' % mgi_utils.date())
+print('done')
 sys.exit(0)
-
