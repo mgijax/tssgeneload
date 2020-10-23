@@ -353,7 +353,6 @@ def findRelationships( ):
     #
     print("len(tssLookup): %s" % len(tssLookup))
     for tMarkerKey in tssLookup:
-        #print(tMarkerKey)
         attribList = tssLookup[tMarkerKey]
         tChromosome = attribList[0]
         #if tChromosome != '1':
@@ -364,60 +363,52 @@ def findRelationships( ):
         tAccid = attribList[4]
         tSymbol = attribList[5]
 
-        #print('type tStart: %s' % type(tStart))
-        #print('type tEnd: %s' % type(tEnd))
         tMidPoint = int(tEnd-((tEnd-tStart+1)/2)) # cast to int for rounding
-        #print('type tMidPoint: %s' % type(tMidPoint))
-        print('tMarkerKey: %s tAccid: %s tSymbol: %s tChromosome: %s tStrand: %s tStart: %s tEnd: %s tMidPoint: %s' % (tMarkerKey, tAccid, tSymbol, tChromosome, tStrand, tStart, tEnd, tMidPoint))
+        #print('tMarkerKey: %s tAccid: %s tSymbol: %s tChromosome: %s tStrand: %s tStart: %s tEnd: %s tMidPoint: %s' % (tMarkerKey, tAccid, tSymbol, tChromosome, tStrand, tStart, tEnd, tMidPoint))
 
-        tStrand = 'p'    # plus strand
+        strand = 'p'    # plus strand
         if tStrand == '-': # minus strand
-             tStrand = 'm'
-        prefix = '%s%s' % (tStrand, tChromosome)
+             strand = 'm'
+        prefix = '%s%s' % (strand, tChromosome)
         geneLookup = eval('%sLookup' % prefix)
         
         currentWithinGenes = {}
         current2KBGenes = {}
         for gMarkerKey in geneLookup:
+            #if gMarkerKey == '84154':
+            #    print('found Arfgef1')
             gChromosome = geneLookup[gMarkerKey][0]
             gStrand =  geneLookup[gMarkerKey][1]
             gStart = geneLookup[gMarkerKey][2]
             gEnd = geneLookup[gMarkerKey][3]
             gAccid = geneLookup[gMarkerKey][4]
             gSymbol = geneLookup[gMarkerKey][5]
-            #print('type gStart: %s' % type(gStart))
-            #print('type gEnd: %s' % type(gEnd))
-            # TSS midpoint <= 2KB upstream of gene start site
-            # + tss strand upstream is < downstream
-            twoKBup = None
-            if tStrand == '+':
-                twoKBup = gStart - 2000
-            else: # tss strand is '-', downstream > upstream
-                twoKBup = gEnd + 2000
-            print('gMarkerKey: %s gAccid: %s gSymbol: %s gChromosome: %s gStrand: %s gStart: %s gEnd: %s twoKBup: %s' % (gMarkerKey, gAccid, gSymbol, gChromosome, gStrand, gStart, gEnd, twoKBup))
+            # TSS midpoint within 2KB upstream
+            if gStrand == '+':
+                startsite = gStart - tMidPoint
+            else: # gStrand == '-'
+                startsite = tMidPoint - gEnd
+            if startsite >= 0 and startsite <= 2000:
+                #print('saving tss midpoint within twoKBUp')
+                current2KBGenes[gMarkerKey] = geneLookup[gMarkerKey]
+                #print('gMarkerKey: %s gAccid: %s gSymbol: %s gChromosome: %s gStrand: %s gStart: %s gEnd: %s StartSite: %s' % (gMarkerKey, gAccid, gSymbol, gChromosome, gStrand, gStart, gEnd, startsite))
 
             # TSS midpoint within the Gene
-            if tMidPoint >= gStart and tMidPoint <= gEnd:
-                print('saving tss midpoint within gene')
+            if tMidPoint - gStart > 0 and tMidPoint <= gEnd:
+                #print('saving tss midpoint within gene')
                 currentWithinGenes[gMarkerKey] = geneLookup[gMarkerKey]
-                print('gMarkerKey: %s gAccid: %s gSymbol: %s gChromosome: %s gStrand: %s gStart: %s gEnd: %s' % (gMarkerKey, gAccid, gSymbol, gChromosome, gStrand, gStart, gEnd))
-            # if midpoint within gene, don't look at 2KB up of same gene
-            elif tMidPoint <= twoKBup:
-                print('saving tss midpoint within twoKBUp')
-                # save the gene to the current set for this TSS
-                current2KBGenes[gMarkerKey] = geneLookup[gMarkerKey]            
-                print('gMarkerKey: %s gAccid: %s gSymbol: %s gChromosome: %s gStrand: %s gStart: %s gEnd: %s twoKBup: %s' % (gMarkerKey, gAccid, gSymbol, gChromosome, gStrand, gStart, gEnd, twoKBup))
+                #print('gMarkerKey: %s gAccid: %s gSymbol: %s gChromosome: %s gStrand: %s gStart: %s gEnd: %s' % (gMarkerKey, gAccid, gSymbol, gChromosome, gStrand, gStart, gEnd))
       
         # Find the gene where start site is closest to the TSS midpoint
         # Do this separately for within and 2KB
-        print('look for currentWithinClosestStart and currentWithinBestGene')
+        #print('look for currentWithinClosestStart and currentWithinBestGene')
         currentWithinClosestStart = None
         currentWithinBestGene = ''
         for mKey in currentWithinGenes:
            gStrand = currentWithinGenes[mKey][1]
            gStart = currentWithinGenes[mKey][2]
-           ss = abs(tMidPoint - gStart)
-           print('ss: %s' % ss)
+           ss = tMidPoint - gStart
+           #print('ss: %s' % ss)
            if currentWithinClosestStart == None:
                currentWithinClosestStart = ss 
                currentWithinBestGene = mKey
@@ -425,16 +416,20 @@ def findRelationships( ):
            if ss <= currentWithinClosestStart:
                currentWithinClosestStart = ss 
                currentWithinBestGene = mKey
-           print('currentWithinClosestStart:%s currentWithinBestGene: %s' % (currentWithinClosestStart, currentWithinBestGene))
+           #print('currentWithinClosestStart:%s currentWithinBestGene: %s' % (currentWithinClosestStart, currentWithinBestGene))
 
-        print('look for current2KBClosestStart and current2KBBestGene')
+        #print('look for current2KBClosestStart and current2KBBestGene')
         current2KBClosestStart = None
         current2KBBestGene = ''
         for mKey in current2KBGenes:
            gStrand = current2KBGenes[mKey][1]
            gStart = current2KBGenes[mKey][2]
-           ss = abs(tMidPoint - gStart)
-           print('ss: %s' % ss)
+           if gStrand == '+':
+               ss = gStart - tMidPoint
+           else: # gStrand == '-'
+               ss = tMidPoint - gEnd
+
+           #print('ss: %s' % ss)
            if current2KBClosestStart == None:
                current2KBClosestStart = ss
                current2KBBestGene = mKey
@@ -442,39 +437,39 @@ def findRelationships( ):
            if ss <= current2KBClosestStart:
                current2KBClosestStart = ss
                current2KBBestGene = mKey
-           print('current2KBClosestStart:%s current2KBBestGene: %s' % (current2KBClosestStart, current2KBBestGene))
+           #print('current2KBClosestStart:%s current2KBBestGene: %s' % (current2KBClosestStart, current2KBBestGene))
         # now choose the gene to create the relationship with
-        print('now chose the gene to create the relationship with')
-        print ('currentWithinBestGene: %s currentWithinClosestStart: %s current2KBBestGene: %s current2KBClosestStart: %s' % (currentWithinBestGene, currentWithinClosestStart, current2KBBestGene, current2KBClosestStart))
+        #print('now choose the gene to create the relationship with')
+        #print ('currentWithinBestGene: %s currentWithinClosestStart: %s current2KBBestGene: %s current2KBClosestStart: %s' % (currentWithinBestGene, currentWithinClosestStart, current2KBBestGene, current2KBClosestStart))
         geneKeyToUse = ''
 
         # if no gene, skip
         if currentWithinBestGene == '' and current2KBBestGene == '':
-            print('F! No gene for tssMarker: %s attributes: %s' % (tMarkerKey, attribList))
+            #print('F! No gene for tssMarker: %s attributes: %s' % (tMarkerKey, attribList))
             noGene[tMarkerKey] = (tssLookup[tMarkerKey])
             continue
         if currentWithinBestGene != '' and current2KBBestGene != '':
             if currentWithinClosestStart == current2KBClosestStart:
-                print('A! currentWithinClosestStart: %s == current2KBClosestStart: %s, pick currentWithinBestGene: %s' % (currentWithinClosestStart,  current2KBClosestStart, currentWithinBestGene))
+                #print('A! currentWithinClosestStart: %s == current2KBClosestStart: %s, pick currentWithinBestGene: %s' % (currentWithinClosestStart,  current2KBClosestStart, currentWithinBestGene))
                 within2KbTie[tMarkerKey] = [currentWithinGenes]
                 within2KbTie[tMarkerKey].append(current2KBGenes)
                 geneKeyToUse = currentWithinBestGene
             elif currentWithinClosestStart < current2KBClosestStart:
-                print('B! currentWithinClosestStart:%s < current2KBClosestStart: %s, pick currentWithinBestGene: %s' % (currentWithinClosestStart, current2KBClosestStart, currentWithinBestGene))
+                #print('B! currentWithinClosestStart:%s < current2KBClosestStart: %s, pick currentWithinBestGene: %s' % (currentWithinClosestStart, current2KBClosestStart, currentWithinBestGene))
                 within2KBwithinClosest[tMarkerKey] = [currentWithinGenes]
                 within2KBwithinClosest[tMarkerKey].append(current2KBGenes)
                 geneKeyToUse = currentWithinBestGene
             else:
-                print('C! current2KBClosestStart:%s < currentWithinClosestStart: %s, pick currentsKBBestGene: %s' % (current2KBClosestStart, currentWithinClosestStart, current2KBBestGene))
+                #print('C! current2KBClosestStart:%s < currentWithinClosestStart: %s, pick currentsKBBestGene: %s' % (current2KBClosestStart, currentWithinClosestStart, current2KBBestGene))
                 within2Kb2KbClosest[tMarkerKey] = [currentWithinGenes]
                 within2Kb2KbClosest[tMarkerKey].append(current2KBGenes)
                 geneKeyToUse = current2KBBestGene
         elif currentWithinBestGene != '':
-            print('D! pick currentWithinBestGene: %s' % currentWithinBestGene)
+            #print('D! pick currentWithinBestGene: %s' % currentWithinBestGene)
             onlyWithin[tMarkerKey] = currentWithinGenes
             geneKeyToUse = currentWithinBestGene
         else:
-            print('E! pick current2KBBestGene: %s' % current2KBBestGene)
+            #print('E! pick current2KBBestGene: %s' % current2KBBestGene)
             only2Kb[tMarkerKey] = current2KBGenes
             geneKeyToUse = current2KBBestGene
         
