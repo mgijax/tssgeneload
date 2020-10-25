@@ -394,10 +394,13 @@ def findRelationships( ):
                 #print('gMarkerKey: %s gAccid: %s gSymbol: %s gChromosome: %s gStrand: %s gStart: %s gEnd: %s StartSite: %s' % (gMarkerKey, gAccid, gSymbol, gChromosome, gStrand, gStart, gEnd, startsite))
 
             # TSS midpoint within the Gene
-            if tMidPoint - gStart > 0 and tMidPoint <= gEnd:
-                #print('saving tss midpoint within gene')
-                currentWithinGenes[gMarkerKey] = geneLookup[gMarkerKey]
-                #print('gMarkerKey: %s gAccid: %s gSymbol: %s gChromosome: %s gStrand: %s gStart: %s gEnd: %s' % (gMarkerKey, gAccid, gSymbol, gChromosome, gStrand, gStart, gEnd))
+            if gStrand == '+':
+                if tMidPoint - gStart > 0 and tMidPoint <= gEnd:
+                    currentWithinGenes[gMarkerKey] = geneLookup[gMarkerKey]
+            else: # gStrand == '-'
+                if gEnd - tMidPoint > 0 and tMidPoint >= gStart:
+                    currentWithinGenes[gMarkerKey] = geneLookup[gMarkerKey]
+            #print('gMarkerKey: %s gAccid: %s gSymbol: %s gChromosome: %s gStrand: %s gStart: %s gEnd: %s' % (gMarkerKey, gAccid, gSymbol, gChromosome, gStrand, gStart, gEnd))
       
         # Find the gene where start site is closest to the TSS midpoint
         # Do this separately for within and 2KB
