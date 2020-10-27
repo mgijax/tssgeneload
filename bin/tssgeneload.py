@@ -144,7 +144,7 @@ mMTLookup = {}
 within2KbTie = {}
 
 # # {tssKey: {[withinAttribsDict, 2KbAttribsDict]}
-within2KBwithinClosest = {}
+within2KbwithinClosest = {}
 
 # {tssKey: {[withinAttribsDict, 2KbAttribsDict]}
 within2Kb2KbClosest = {}
@@ -355,7 +355,7 @@ def findRelationships( ):
     for tMarkerKey in tssLookup:
         attribList = tssLookup[tMarkerKey]
         tChromosome = attribList[0]
-        #if tChromosome != '1':
+        #if tChromosome != '2':
         #    continue
         tStrand = attribList[1]
         tStart = attribList[2]
@@ -383,7 +383,10 @@ def findRelationships( ):
             gEnd = geneLookup[gMarkerKey][3]
             gAccid = geneLookup[gMarkerKey][4]
             gSymbol = geneLookup[gMarkerKey][5]
+
+            #
             # TSS midpoint within 2KB upstream
+            #
             if gStrand == '+':
                 startsite = gStart - tMidPoint
             else: # gStrand == '-'
@@ -393,14 +396,24 @@ def findRelationships( ):
                 current2KBGenes[gMarkerKey] = geneLookup[gMarkerKey]
                 #print('gMarkerKey: %s gAccid: %s gSymbol: %s gChromosome: %s gStrand: %s gStart: %s gEnd: %s StartSite: %s' % (gMarkerKey, gAccid, gSymbol, gChromosome, gStrand, gStart, gEnd, startsite))
 
+            #
             # TSS midpoint within the Gene
+            #
+
+            # debug
+            #within = 0
+        
             if gStrand == '+':
                 if tMidPoint - gStart > 0 and tMidPoint <= gEnd:
                     currentWithinGenes[gMarkerKey] = geneLookup[gMarkerKey]
+                    #within = 1
             else: # gStrand == '-'
                 if gEnd - tMidPoint > 0 and tMidPoint >= gStart:
                     currentWithinGenes[gMarkerKey] = geneLookup[gMarkerKey]
-            #print('gMarkerKey: %s gAccid: %s gSymbol: %s gChromosome: %s gStrand: %s gStart: %s gEnd: %s' % (gMarkerKey, gAccid, gSymbol, gChromosome, gStrand, gStart, gEnd))
+                    #within = 1
+            #if within == 1:
+                #print ('saving tss migPoint within gene')
+                #print('gMarkerKey: %s gAccid: %s gSymbol: %s gChromosome: %s gStrand: %s gStart: %s gEnd: %s StartSite neg strand: %s' % (gMarkerKey, gAccid, gSymbol, gChromosome, gStrand, gStart, gEnd, gEnd - tMidPoint))
       
         # Find the gene where start site is closest to the TSS midpoint
         # Do this separately for within and 2KB
@@ -410,8 +423,12 @@ def findRelationships( ):
         for mKey in currentWithinGenes:
            gStrand = currentWithinGenes[mKey][1]
            gStart = currentWithinGenes[mKey][2]
-           ss = tMidPoint - gStart
-           #print('ss: %s' % ss)
+           gEnd = currentWithinGenes[mKey][3]
+           if gStrand == '+':
+               ss = tMidPoint - gStart
+           else: # gStrand is '-'
+               ss = gEnd - tMidPoint
+           #print('Part 2 within ss: %s' % ss)
            if currentWithinClosestStart == None:
                currentWithinClosestStart = ss 
                currentWithinBestGene = mKey
@@ -427,12 +444,13 @@ def findRelationships( ):
         for mKey in current2KBGenes:
            gStrand = current2KBGenes[mKey][1]
            gStart = current2KBGenes[mKey][2]
+           gEnd = current2KBGenes[mKey][3]
            if gStrand == '+':
                ss = gStart - tMidPoint
            else: # gStrand == '-'
                ss = tMidPoint - gEnd
 
-           #print('ss: %s' % ss)
+           #print('Part 2 mKey: %s gStrand: %s 2KB ss: %s' % (mKey, gStrand, ss))
            if current2KBClosestStart == None:
                current2KBClosestStart = ss
                current2KBBestGene = mKey
@@ -441,7 +459,6 @@ def findRelationships( ):
                current2KBClosestStart = ss
                current2KBBestGene = mKey
            #print('current2KBClosestStart:%s current2KBBestGene: %s' % (current2KBClosestStart, current2KBBestGene))
-        # now choose the gene to create the relationship with
         #print('now choose the gene to create the relationship with')
         #print ('currentWithinBestGene: %s currentWithinClosestStart: %s current2KBBestGene: %s current2KBClosestStart: %s' % (currentWithinBestGene, currentWithinClosestStart, current2KBBestGene, current2KBClosestStart))
         geneKeyToUse = ''
@@ -459,8 +476,8 @@ def findRelationships( ):
                 geneKeyToUse = currentWithinBestGene
             elif currentWithinClosestStart < current2KBClosestStart:
                 #print('B! currentWithinClosestStart:%s < current2KBClosestStart: %s, pick currentWithinBestGene: %s' % (currentWithinClosestStart, current2KBClosestStart, currentWithinBestGene))
-                within2KBwithinClosest[tMarkerKey] = [currentWithinGenes]
-                within2KBwithinClosest[tMarkerKey].append(current2KBGenes)
+                within2KbwithinClosest[tMarkerKey] = [currentWithinGenes]
+                within2KbwithinClosest[tMarkerKey].append(current2KBGenes)
                 geneKeyToUse = currentWithinBestGene
             else:
                 #print('C! current2KBClosestStart:%s < currentWithinClosestStart: %s, pick currentsKBBestGene: %s' % (current2KBClosestStart, currentWithinClosestStart, current2KBBestGene))
@@ -499,9 +516,9 @@ def writeReports():
     for tssKey in within2KbTie:
         fpWithin2KbTie.write('%s within: %s%s' % (tssKey, within2KbTie[tssKey][0], CRT))
         fpWithin2KbTie.write('%s 2KB: %s%s' % (tssKey, within2KbTie[tssKey][1], CRT))
-    for tssKey in within2KBwithinClosest:
-        fpWithin2KbWithinClosest.write('%s within: %s%s' % (tssKey, within2KBwithinClosest[tssKey][0], CRT))
-        fpWithin2KbWithinClosest.write('%s  2KB: %s%s' % (tssKey, within2KBwithinClosest[tssKey][1], CRT))
+    for tssKey in within2KbwithinClosest:
+        fpWithin2KbWithinClosest.write('%s within: %s%s' % (tssKey, within2KbwithinClosest[tssKey][0], CRT))
+        fpWithin2KbWithinClosest.write('%s  2KB: %s%s' % (tssKey, within2KbwithinClosest[tssKey][1], CRT))
     for tssKey in within2Kb2KbClosest:
         fpWithin2Kb2KbClosest.write('%s within: %s%s' % (tssKey, within2Kb2KbClosest[tssKey][0], CRT))
         fpWithin2Kb2KbClosest.write('%s 2KB: %s%s' % (tssKey, within2Kb2KbClosest[tssKey][1], CRT))
