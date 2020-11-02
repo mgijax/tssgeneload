@@ -44,13 +44,10 @@ export FILEDIR ARCHIVEDIR LOGDIR RPTDIR OUTPUTDIR INPUTDIR
 # input/output
 INPUT_PENDING=/data/tssgene/pending
 INPUT_CURRENT=/data/tssgene/current
-INPUT_FILE_NAME=tssgene.txt
-INPUT_FILE_DEFAULT=${INPUTDIR}/${INPUT_FILE_NAME}
 QC_RPT=${RPTDIR}/tssgene_qc.rpt
 QC_LOGFILE=${LOGDIR}/tssgene_qc.log
 export INPUT_PENDING INPUT_CURRENT
-export INPUT_FILE_NAME INPUT_FILE_DEFAULT QC_RPT
-export QC_LOGFILE
+export QC_RPT QC_LOGFILE
 
 #  Complete path name of the log files
 LOG_FILE=${LOGDIR}/tssgeneload.log
@@ -62,7 +59,7 @@ LOG_VAL=${LOGDIR}/tssgeneload.val.log
 export LOG_FILE LOG_PROC LOG_DIAG LOG_CUR LOG_VAL LOG_DEBUG
 
 # load reference
-JNUM=J:208882
+JNUM=J:296394
 
 # minumum number of lines expected in the input file
 MIN_LINES=70
