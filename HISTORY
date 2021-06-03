@@ -1,3 +1,8 @@
+TAG: tssgeneload-6-0-17-2
+DATE: 06/03/2021
+STAFF: sc
+CHANGES: fixed post release bug - needs to use mgi_relationship_seq
+
 TAG: tssgeneload-6-0-17-1
 DATE: 05/11/2021
 STAFF: sc

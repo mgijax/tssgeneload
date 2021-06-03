@@ -191,7 +191,7 @@ def init():
     #
     # get next MGI_Relationship key
     #
-    results = db.sql('''select max(_Relationship_key) + 1 as nextKey from MGI_Relationship''', 'auto')
+    results = db.sql('''select nextval('mgi_relationship_seq') as nextKey''', 'auto')
     if results[0]['nextKey'] is None:
         nextRelationshipKey = 1000
     else:
@@ -561,6 +561,8 @@ def bcpFiles():
     if rc != 0:
         closeFiles()
         sys.exit(2)
+    # update mgi_relationship auto-sequence
+    db.sql(''' select setval('mgi_relationship_seq', (select max(_Relationship_key) from MGI_Relationship)) ''', None)
 
     return
 
