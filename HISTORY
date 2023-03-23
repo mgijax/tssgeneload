@@ -1,3 +1,11 @@
+TAG: tssgeneload-6-0-22-1
+DATE: 03/23/2023
+STAFF: lec
+wts2-1145/fl2-261/TSS Gene Load needs some cleanup
+removed INPUT variables due to 2021 changes:
+#       modified:   bin/tssgeneload.sh
+#       modified:   tssgeneload.config.default
+
 TAG: tssgeneload-6-0-17-2
 DATE: 06/03/2021
 STAFF: sc

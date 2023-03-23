@@ -49,17 +49,6 @@ else
 fi
 
 #
-# verify input file exists and is readable
-#
-
-if [ ! -r ${INPUT_FILE_DEFAULT} ]
-then
-    # set STAT for endJobStream.py
-    STAT=1
-    checkStatus ${STAT} "Cannot read from input file: ${INPUT_FILE_DEFAULT}"
-fi
-
-#
 # createArchive including OUTPUTDIR, startLog, getConfigEnv
 # sets "JOBKEY"
 #
